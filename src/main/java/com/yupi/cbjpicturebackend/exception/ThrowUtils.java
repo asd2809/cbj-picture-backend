@@ -31,7 +31,7 @@ public class ThrowUtils {
      * @param errorCode 错误码
      * @param message   错误信息
      */
-    public static void throwIFf(boolean condition, ErrorCode errorCode, String message) {
+    public static void throwIF(boolean condition, ErrorCode errorCode, String message) {
         throwIF(condition, new BusinessException(errorCode, message));
     }
 
