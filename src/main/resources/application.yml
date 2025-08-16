@@ -37,3 +37,11 @@ knife4j:
         api-rule: package
         api-rule-resources:
           - com.yupi.cbjpicturebackend.controller
+#对象存储
+cos:
+  client:
+    host: xxx
+    secretId: xxx
+    secretKey: xxx
+    region: xxx
+    bucket: xxx
