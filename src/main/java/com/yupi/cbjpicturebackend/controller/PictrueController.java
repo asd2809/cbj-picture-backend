@@ -6,20 +6,16 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yupi.cbjpicturebackend.annotation.AuthCheck;
 import com.yupi.cbjpicturebackend.common.BaseResponse;
 import com.yupi.cbjpicturebackend.common.DeleteRequest;
-import com.yupi.cbjpicturebackend.common.PageRequest;
 import com.yupi.cbjpicturebackend.common.ResultUtils;
 import com.yupi.cbjpicturebackend.constant.UserConstant;
 import com.yupi.cbjpicturebackend.exception.ErrorCode;
 import com.yupi.cbjpicturebackend.exception.ThrowUtils;
-import com.yupi.cbjpicturebackend.model.dto.picture.PictureEditRequest;
-import com.yupi.cbjpicturebackend.model.dto.picture.PictureQueryRequest;
-import com.yupi.cbjpicturebackend.model.dto.picture.PictureUpdateRequest;
-import com.yupi.cbjpicturebackend.model.dto.picture.PictureUploadRequest;
+import com.yupi.cbjpicturebackend.model.dto.picture.*;
 import com.yupi.cbjpicturebackend.model.entity.Picture;
 import com.yupi.cbjpicturebackend.model.entity.User;
+import com.yupi.cbjpicturebackend.model.enums.PictureReviewStatusEnum;
 import com.yupi.cbjpicturebackend.model.vo.PictureTagCategory;
 import com.yupi.cbjpicturebackend.model.vo.PictureVO;
-import com.yupi.cbjpicturebackend.model.vo.UserVO;
 import com.yupi.cbjpicturebackend.service.PictureService;
 import com.yupi.cbjpicturebackend.service.UserService;
 import lombok.extern.slf4j.Slf4j;
@@ -76,7 +72,8 @@ public class PictrueController {
      */
     @PostMapping("/update")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
-    public BaseResponse<Boolean> updatePicture(PictureUpdateRequest pictureUpdateRequest){
+    public BaseResponse<Boolean> updatePicture(PictureUpdateRequest pictureUpdateRequest,
+                                               HttpServletRequest request) {
 //      1.判断传入的请求是否为空
         ThrowUtils.throwIF(pictureUpdateRequest==null || pictureUpdateRequest.getId() <= 0,
                 ErrorCode.PARAMS_ERROR,"web请求的参数错误");
@@ -92,6 +89,9 @@ public class PictrueController {
 //        先把请求的id通过数据库查询,是否存在这个图片
         Picture oldPicture = pictureService.getById(pictureUpdateRequest.getId());
         ThrowUtils.throwIF(oldPicture == null,ErrorCode.PARAMS_ERROR,"该图片不存在数据库中");
+//       补充过审
+        User loginUser = userService.getLoginUser(request);
+        pictureService.fillReviewParams(picture, loginUser);
         boolean result = pictureService.updateById(picture);
 //       这个才是真正的进行更新操作
         ThrowUtils.throwIF(!result,ErrorCode.SYSTEM_ERROR,"数据库操作失败");
@@ -134,6 +134,8 @@ public class PictrueController {
         int pageSize = pictureQueryRequest.getPageSize();
         //限制爬虫
         ThrowUtils.throwIF(pageSize > 20,ErrorCode.PARAMS_ERROR);
+//        普通用户默认只能看到审核通过的数据
+        pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
         //       操作数据库
         Page<Picture> picturePage = pictureService.page(new Page<>(current, pageSize),
                 pictureService.getQueryWrapper(pictureQueryRequest));
@@ -199,7 +201,8 @@ public class PictrueController {
         if(!oldPicture.getUserId().equals(loginUser.getId()) || !UserConstant.ADMIN_ROLE.equals(loginUser.getUserRole())){
             ThrowUtils.throwIF(true,ErrorCode.NO_AUTH_ERROR,"编辑图片既不是本人也不是管理员");
         }
-
+//      补充过审
+        pictureService.fillReviewParams(picture, loginUser);
         boolean result = pictureService.updateById(picture);
         ThrowUtils.throwIF(!result,ErrorCode.SYSTEM_ERROR,"数据库操作失败");
 
@@ -216,6 +219,20 @@ public class PictrueController {
         return ResultUtils.success(pictureTagCategory);
     }
 
+    /**
+     * 审核图片
+     */
+    @PostMapping("/review")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public BaseResponse<Boolean> doPictureUpload(@RequestBody PictureReviewRequest pictureReviewRequest,
+                                                 HttpServletRequest request) {
+        ThrowUtils.throwIF(pictureReviewRequest == null, ErrorCode.PARAMS_ERROR);
+//        获取当前用户
+        User loginUser = userService.getLoginUser(request);
+
+        pictureService.doPictureReview(pictureReviewRequest, loginUser);
+        return ResultUtils.success(true);
+    }
 
 
 }
