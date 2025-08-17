@@ -42,7 +42,6 @@ public interface UserService extends IService<User> {
      */
     boolean userLoginOut(HttpServletRequest request);
 
-
     /**
      * 获取加密后的密码
      *
@@ -79,4 +78,10 @@ public interface UserService extends IService<User> {
      */
     QueryWrapper<User> getQueryWrapper(UserQueryRequest userQueryRequest);
 
+    /**
+     * 判断是不是管理员权限
+     * @param user
+     * @return
+     */
+    public boolean isAdmin(User user);
 }

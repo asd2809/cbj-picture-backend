@@ -3,7 +3,7 @@ package com.yupi.cbjpicturebackend.common;
 import lombok.Data;
 
 @Data
-public class DeletRequest {
+public class DeleteRequest {
 
     /**
      * id
