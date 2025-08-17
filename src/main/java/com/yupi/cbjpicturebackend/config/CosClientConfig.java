@@ -13,6 +13,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
+//把配置文件的cos.client.*前缀的属性,自动绑定到一个Java类的字段上
 @ConfigurationProperties(prefix = "cos.client")
 @Data
 public class CosClientConfig {
@@ -37,6 +38,7 @@ public class CosClientConfig {
      */
     private String bucket;
 
+//    返回腾讯云cos客户端
     @Bean
     public COSClient CosClient() {
 //        初始化用户信息
