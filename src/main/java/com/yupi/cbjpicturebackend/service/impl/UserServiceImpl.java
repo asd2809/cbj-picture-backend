@@ -9,6 +9,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.yupi.cbjpicturebackend.constant.UserConstant;
 import com.yupi.cbjpicturebackend.exception.BusinessException;
 import com.yupi.cbjpicturebackend.exception.ErrorCode;
+import com.yupi.cbjpicturebackend.exception.ThrowUtils;
 import com.yupi.cbjpicturebackend.model.dto.user.UserQueryRequest;
 import com.yupi.cbjpicturebackend.model.entity.LoginUserVO;
 import com.yupi.cbjpicturebackend.model.entity.User;
@@ -195,11 +196,20 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         return queryWrapper;
     }
 
+
     @Override
     public String getEncryptPassword(String userPassword) {
 //        加密，混淆密码
         final String SALT = "yupi";
         return DigestUtils.md5DigestAsHex((SALT + userPassword).getBytes());
+    }
+
+    @Override
+    public boolean isAdmin(User user) {
+        if (user == null) {
+            return false;
+        }
+        return !UserRoleEnum.ADMIN.getValue().equals(user.getUserRole());
     }
 }
 

@@ -4,7 +4,7 @@ package com.yupi.cbjpicturebackend.controller;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yupi.cbjpicturebackend.annotation.AuthCheck;
 import com.yupi.cbjpicturebackend.common.BaseResponse;
-import com.yupi.cbjpicturebackend.common.DeletRequest;
+import com.yupi.cbjpicturebackend.common.DeleteRequest;
 import com.yupi.cbjpicturebackend.common.ResultUtils;
 import com.yupi.cbjpicturebackend.constant.UserConstant;
 import com.yupi.cbjpicturebackend.exception.ErrorCode;
@@ -125,12 +125,12 @@ public class UserController {
      */
     @PostMapping("/delete")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
-    public BaseResponse<Boolean> deleteUser(@RequestBody DeletRequest deletRequest) {
+    public BaseResponse<Boolean> deleteUser(@RequestBody DeleteRequest deleteRequest) {
 
 //        1.判断传入的对象是否为空
-        ThrowUtils.throwIF(deletRequest == null, ErrorCode.PARAMS_ERROR);
+        ThrowUtils.throwIF(deleteRequest == null, ErrorCode.PARAMS_ERROR);
 //        2.根据id删除用户
-        boolean result = userService.removeById(deletRequest.getId());
+        boolean result = userService.removeById(deleteRequest.getId());
         return ResultUtils.success(result);
     }
     /**
