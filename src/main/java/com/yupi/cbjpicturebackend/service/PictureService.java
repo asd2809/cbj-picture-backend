@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yupi.cbjpicturebackend.common.BaseResponse;
 import com.yupi.cbjpicturebackend.common.DeleteRequest;
 import com.yupi.cbjpicturebackend.model.dto.picture.PictureQueryRequest;
+import com.yupi.cbjpicturebackend.model.dto.picture.PictureReviewRequest;
 import com.yupi.cbjpicturebackend.model.dto.picture.PictureUploadRequest;
 import com.yupi.cbjpicturebackend.model.dto.user.UserQueryRequest;
 import com.yupi.cbjpicturebackend.model.entity.Picture;
@@ -66,4 +67,15 @@ public interface PictureService extends IService<Picture> {
      */
     List<PictureVO> getPictureVOList(List<Picture> pictureList);
 
+    /**
+     * 成功
+     * 失败，直接抛异常
+     * 图片审核
+     *
+     * @param pictureReviewRequest
+     * @param loginUser
+     */
+    void doPictureReview(PictureReviewRequest pictureReviewRequest, User loginUser);
+
+    void fillReviewParams(Picture picture, User loginUser);
 }
