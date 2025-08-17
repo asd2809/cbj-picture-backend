@@ -6,11 +6,11 @@ import java.io.Serializable;
 
 //图片上传请求
 @Data
-public class PictureAddRequest implements Serializable {
+public class PictureUploadRequest implements Serializable {
     /**
      * 图片id()
      */
-    private String id;
+    private Long id;
 
     private static final long serialVersionUID = 1L;
 

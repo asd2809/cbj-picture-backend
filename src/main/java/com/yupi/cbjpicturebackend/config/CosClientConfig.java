@@ -38,6 +38,7 @@ public class CosClientConfig {
      */
     private String bucket;
 
+//    返回腾讯云cos客户端
     @Bean
     public COSClient CosClient() {
 //        初始化用户信息

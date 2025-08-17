@@ -31,7 +31,7 @@ public class FileManager {
 
     @Resource
     private CosManager cosManager;
-
+//    主方法，用于把图片上传到腾讯云cos
     public UploadPictureResult uploadPicture(MultipartFile multipartFile, String uploadPathPrefix) {
 //        1.校验图片
         validPicture(multipartFile);
@@ -50,10 +50,12 @@ public class FileManager {
 //            把file传递给本地临时文件
             multipartFile.transferTo(file);
 //            由于这个方法是接收file而不是multipartFile,所以要转换成file文件
-            PutObjectResult putObjectResult = cosManager.putObject(uploadPath, file);
+//            上传到对象存储里面(腾讯云的cos中)
+            PutObjectResult putObjectResult = cosManager.putPictureObject(uploadPath, file);
 //            获取图片信息对象
             ImageInfo imageInfo = putObjectResult.getCiUploadResult().getOriginalInfo().getImageInfo();
             String format = imageInfo.getFormat();
+
 //            计算宽高比
             int picWidth = imageInfo.getWidth();
             int picHeight = imageInfo.getHeight();
@@ -66,7 +68,7 @@ public class FileManager {
             uploadPictureResult.setPicWidth(picWidth);
             uploadPictureResult.setPicHeight(picHeight);
             uploadPictureResult.setPicScale(picScale);
-            uploadPictureResult.setPicFormat(imageInfo.getFormat());
+            uploadPictureResult.setPicFormat(format);
 //            返回可访问的地址
             return uploadPictureResult;
         } catch (Exception e) {
