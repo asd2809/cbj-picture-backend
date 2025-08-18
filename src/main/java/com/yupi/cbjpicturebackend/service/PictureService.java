@@ -7,6 +7,7 @@ import com.yupi.cbjpicturebackend.common.BaseResponse;
 import com.yupi.cbjpicturebackend.common.DeleteRequest;
 import com.yupi.cbjpicturebackend.model.dto.picture.PictureQueryRequest;
 import com.yupi.cbjpicturebackend.model.dto.picture.PictureReviewRequest;
+import com.yupi.cbjpicturebackend.model.dto.picture.PictureUploadByBatchRequest;
 import com.yupi.cbjpicturebackend.model.dto.picture.PictureUploadRequest;
 import com.yupi.cbjpicturebackend.model.dto.user.UserQueryRequest;
 import com.yupi.cbjpicturebackend.model.entity.Picture;
@@ -78,4 +79,13 @@ public interface PictureService extends IService<Picture> {
     void doPictureReview(PictureReviewRequest pictureReviewRequest, User loginUser);
 
     void fillReviewParams(Picture picture, User loginUser);
+
+    /**
+     * 批量抓取和创建图片
+     *
+     * @param pictureUploadByBatchRequest
+     * @param loginUser
+     * @return
+     */
+    Integer uploadPictureByBatch(PictureUploadByBatchRequest pictureUploadByBatchRequest, User loginUser);
 }

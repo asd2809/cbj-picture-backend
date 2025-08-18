@@ -246,5 +246,20 @@ public class PictrueController {
         return ResultUtils.success(true);
     }
 
+    /**
+     * 批量上传图片
+     * @param pictureUploadByBatchRequest
+     * @param request
+     * @return
+     */
+    @PostMapping("/upload/batch")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public BaseResponse<Integer> uploadPictureByBatch(@RequestBody PictureUploadByBatchRequest pictureUploadByBatchRequest,
+                                                      HttpServletRequest request) {
+        ThrowUtils.throwIF(pictureUploadByBatchRequest == null, ErrorCode.PARAMS_ERROR,"传入的参数错误");
+        User user = userService.getLoginUser(request);
+        int uploadCount = pictureService.uploadPictureByBatch(pictureUploadByBatchRequest, user);
+        return ResultUtils.success(uploadCount);
+    }
 
 }
