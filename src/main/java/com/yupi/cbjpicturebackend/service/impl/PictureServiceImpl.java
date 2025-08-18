@@ -9,11 +9,12 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.yupi.cbjpicturebackend.common.BaseResponse;
 import com.yupi.cbjpicturebackend.common.DeleteRequest;
 import com.yupi.cbjpicturebackend.common.ResultUtils;
-import com.yupi.cbjpicturebackend.constant.UserConstant;
 import com.yupi.cbjpicturebackend.exception.BusinessException;
 import com.yupi.cbjpicturebackend.exception.ErrorCode;
 import com.yupi.cbjpicturebackend.exception.ThrowUtils;
-import com.yupi.cbjpicturebackend.manager.FileManager;
+import com.yupi.cbjpicturebackend.manager.upload.PictureUpload;
+import com.yupi.cbjpicturebackend.manager.upload.PictureUploadTemplate;
+import com.yupi.cbjpicturebackend.manager.upload.UrlPictureUpload;
 import com.yupi.cbjpicturebackend.model.dto.file.UploadPictureResult;
 import com.yupi.cbjpicturebackend.model.dto.picture.PictureQueryRequest;
 import com.yupi.cbjpicturebackend.model.dto.picture.PictureReviewRequest;
@@ -26,18 +27,14 @@ import com.yupi.cbjpicturebackend.service.PictureService;
 import com.yupi.cbjpicturebackend.model.entity.Picture;
 import com.yupi.cbjpicturebackend.mapper.PictureMapper;
 import com.yupi.cbjpicturebackend.service.UserService;
-import net.bytebuddy.implementation.bytecode.Throw;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
-import java.awt.print.Pageable;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * @author leneve
@@ -48,10 +45,12 @@ import java.util.stream.Stream;
 public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         implements PictureService {
 
-    @Resource
-    private FileManager fileManager;
     @Autowired
     private UserService userService;
+    @Resource
+    private PictureUpload filePictureUpload;
+    @Resource
+    private UrlPictureUpload urlPictureUpload;
 
 
     /**
@@ -60,7 +59,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
      * @return
      */
     @Override
-    public PictureVO uploadPicture(MultipartFile multipartFile, PictureUploadRequest pictureUploadRequest, User loginUser) {
+    public PictureVO uploadPicture(Object inputSource, PictureUploadRequest pictureUploadRequest, User loginUser) {
         //1.校验参数
         ThrowUtils.throwIF(loginUser == null, ErrorCode.PARAMS_ERROR, "用户未登录");
         //2.判断是新增还是更新
@@ -82,7 +81,12 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         //4.上传图片
         //按照用户id划分目录
         String uploadPathPrefix = String.format("public/%s", loginUser.getId());
-        UploadPictureResult uploadPictureResult = fileManager.uploadPicture(multipartFile, uploadPathPrefix);
+        //根据 InputSource 的类型区分上传方式
+        PictureUploadTemplate pictureUploadTemplate = filePictureUpload;
+        if (inputSource instanceof String) {
+            pictureUploadTemplate = urlPictureUpload;
+        }
+        UploadPictureResult uploadPictureResult = pictureUploadTemplate.uploadPicture(inputSource, uploadPathPrefix);
 
         Picture picture = new Picture();
         //BeanUtils.copyProperties(uploadPictureResult, picture);,不使用BeanUtil的原因是两者字段名存在不一样的

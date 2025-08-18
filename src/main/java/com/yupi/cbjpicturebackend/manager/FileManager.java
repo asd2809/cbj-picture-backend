@@ -1,13 +1,15 @@
 package com.yupi.cbjpicturebackend.manager;
 
-import cn.hutool.core.date.DateUnit;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.NumberUtil;
 import cn.hutool.core.util.RandomUtil;
+import cn.hutool.core.util.StrUtil;
+import cn.hutool.http.HttpResponse;
+import cn.hutool.http.HttpUtil;
+import cn.hutool.http.Method;
 import com.qcloud.cos.model.PutObjectResult;
 import com.qcloud.cos.model.ciModel.persistence.ImageInfo;
-import com.yupi.cbjpicturebackend.common.ResultUtils;
 import com.yupi.cbjpicturebackend.config.CosClientConfig;
 import com.yupi.cbjpicturebackend.exception.BusinessException;
 import com.yupi.cbjpicturebackend.exception.ErrorCode;
@@ -19,18 +21,26 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import java.io.File;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 
+/**
+ * 文件服务
+ * @deprecated 已废弃，改为使用upload包的模板方法优化
+ */
 @Service
 @Slf4j
+@Deprecated
 public class FileManager {
     @Resource
     private CosClientConfig cosClientConfig;
 
     @Resource
     private CosManager cosManager;
+
 //    主方法，用于把图片上传到腾讯云cos
     public UploadPictureResult uploadPicture(MultipartFile multipartFile, String uploadPathPrefix) {
 //        1.校验图片
