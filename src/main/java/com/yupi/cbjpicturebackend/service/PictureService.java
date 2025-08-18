@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 public interface PictureService extends IService<Picture> {
 
 
-    PictureVO uploadPicture(MultipartFile multipartFile, PictureUploadRequest pictureUploadRequest, User loginUser);
+    PictureVO uploadPicture(Object inputSource, PictureUploadRequest pictureUploadRequest, User loginUser);
 
     /**
      * 获取查询条件
