@@ -1,8 +1,12 @@
 package com.yupi.cbjpicturebackend.controller;
 
 
+import cn.hutool.core.util.RandomUtil;
+import cn.hutool.json.JSON;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import com.yupi.cbjpicturebackend.annotation.AuthCheck;
 import com.yupi.cbjpicturebackend.common.BaseResponse;
 import com.yupi.cbjpicturebackend.common.DeleteRequest;
@@ -19,17 +23,22 @@ import com.yupi.cbjpicturebackend.model.vo.PictureVO;
 import com.yupi.cbjpicturebackend.service.PictureService;
 import com.yupi.cbjpicturebackend.service.UserService;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.context.annotation.Bean;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @RestController
@@ -42,6 +51,17 @@ public class PictrueController {
     @Resource
     private UserService userService;
 
+    @Resource
+    private StringRedisTemplate stringRedisTemplate;
+    /**
+     * 本地缓存
+     */
+    private final Cache<String, String> LOCAL_CACHE =Caffeine.newBuilder()
+                                    .initialCapacity(1024)
+                                    .maximumSize(10000L)
+         // 缓存 5 分钟移除
+                                    .expireAfterWrite(Duration.ofMillis(5))
+                                    .build();
     /**
      * 上传图片
      */
@@ -115,11 +135,11 @@ public class PictrueController {
      * @param pictureQueryRequest
      * @return
      */
-    @PostMapping("/list/page/vo")
+    @PostMapping("/list/page")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Page<Picture>> listPictureByPage(@RequestBody PictureQueryRequest pictureQueryRequest){
 //       先判断请求是否为空
-        ThrowUtils.throwIF(pictureQueryRequest==null || pictureQueryRequest.getId() <= 0,
+        ThrowUtils.throwIF(pictureQueryRequest==null,
                 ErrorCode.PARAMS_ERROR,"请求参数错误");
         int current = pictureQueryRequest.getCurrent();
         int pageSize = pictureQueryRequest.getPageSize();
@@ -136,11 +156,11 @@ public class PictrueController {
      * @param pictureQueryRequest
      * @return
      */
-    @PostMapping("/list/page")
+    @PostMapping("/list/page/vo")
     public BaseResponse<Page<PictureVO>> listPictureVOByPage(@RequestBody PictureQueryRequest pictureQueryRequest,
                                                              HttpServletRequest request){
         //先判断请求是否为空
-        ThrowUtils.throwIF(pictureQueryRequest==null || pictureQueryRequest.getId() <= 0,
+        ThrowUtils.throwIF(pictureQueryRequest == null,
                 ErrorCode.PARAMS_ERROR,"请求参数错误");
         int current = pictureQueryRequest.getCurrent();
         int pageSize = pictureQueryRequest.getPageSize();
@@ -153,6 +173,64 @@ public class PictrueController {
                 pictureService.getQueryWrapper(pictureQueryRequest));
         ThrowUtils.throwIF(picturePage==null,ErrorCode.SYSTEM_ERROR,"数据库操作失败");
         return ResultUtils.success(pictureService.getPictureVOPage(picturePage,request));
+    }
+    /**
+     * 分页查询(封装类)
+     * @param pictureQueryRequest
+     * @return
+     */
+    @PostMapping("/list/page/vo/cache")
+    public BaseResponse<Page<PictureVO>> listPictureVOByPageWithCache(@RequestBody PictureQueryRequest pictureQueryRequest,
+                                                             HttpServletRequest request){
+
+        //先判断请求是否为空
+        ThrowUtils.throwIF(pictureQueryRequest==null ,
+                ErrorCode.PARAMS_ERROR,"请求参数错误");
+        int current = pictureQueryRequest.getCurrent();
+        int pageSize = pictureQueryRequest.getPageSize();
+        //限制爬虫
+        ThrowUtils.throwIF(pageSize > 20,ErrorCode.PARAMS_ERROR,"最多只能查20页");
+//        普通用户默认只能看到审核通过的数据
+        pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
+
+        //查询缓存。缓存中没有再查询数据库
+        //构建缓存的key
+        //1.把对象转换为json
+        String queryCondition = JSONUtil.toJsonStr(pictureQueryRequest);
+        String hashKey = DigestUtils.md5Hex(queryCondition);
+        String cacheKey = String.format("yupicture:listPictureVOByPage:%s",hashKey);
+
+        //1.查询本地缓存(Caffeine)
+        String cachedValue = LOCAL_CACHE.getIfPresent(cacheKey);
+        if(cachedValue != null){
+            Page<PictureVO> cachedPage = JSONUtil.toBean(cachedValue, Page.class);
+            return ResultUtils.success(cachedPage);
+        }
+        //2.查redis缓存
+        //操作redis
+        ValueOperations<String, String> opsForValue = stringRedisTemplate.opsForValue();
+        String cachedPage = opsForValue.get(cacheKey);
+        //3.如果redis缓存存在
+        if (cachedPage != null) {
+            //存入本地缓存
+            LOCAL_CACHE.put(cacheKey,cachedPage);
+            //如果缓存存在，获取结果
+            Page<PictureVO> cachePage = JSONUtil.toBean(cachedPage, Page.class);
+            return ResultUtils.success(cachePage);
+        }
+        //4.       操作数据库
+        Page<Picture> picturePage = pictureService.page(new Page<>(current, pageSize),
+                pictureService.getQueryWrapper(pictureQueryRequest));
+        ThrowUtils.throwIF(picturePage==null,ErrorCode.SYSTEM_ERROR,"数据库操作失败");
+        Page<PictureVO> pictureVOPage = pictureService.getPictureVOPage(picturePage, request);
+        //5.更新缓存
+        String cacheValue = JSONUtil.toJsonStr(pictureVOPage);
+        //6.存入本地缓存
+        LOCAL_CACHE.put(cacheKey,cacheValue);
+        //7.设置过期时间5-10分钟,注意缓存雪崩
+        opsForValue.set(cacheKey, cacheValue,5, TimeUnit.MINUTES);
+
+        return ResultUtils.success(pictureVOPage);
     }
 
     /**
