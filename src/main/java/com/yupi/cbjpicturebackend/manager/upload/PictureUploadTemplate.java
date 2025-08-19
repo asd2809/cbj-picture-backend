@@ -37,6 +37,7 @@ public abstract class PictureUploadTemplate {
 
     @Resource
     private CosManager cosManager;
+
     //第一个参数是图片，第二个参数是文件夹名
     //    主方法，用于把图片上传到腾讯云cos
     public UploadPictureResult uploadPicture(Object inputSource, String uploadPathPrefix) {
@@ -44,29 +45,29 @@ public abstract class PictureUploadTemplate {
         validPicture(inputSource);
 //        2.图片上传地址
         String uuid = RandomUtil.randomString(16);
-        String originalFilename =getOriginalFilename(inputSource);
+        String originalFilename = getOriginalFilename(inputSource);
 //        自己拼接文件上传路径，而不是使用原始文件名称(可以自己定义  )
         String uploadFilename = String.format("%s_%s.%s",
-                                        DateUtil.formatDate(new Date()),
-                                        uuid,
-                                        FileUtil.getSuffix(originalFilename));
+                DateUtil.formatDate(new Date()),
+                uuid,
+                FileUtil.getSuffix(originalFilename));
         String uploadPath = String.format("%s/%s",
-                                        uploadPathPrefix,
-                                        uploadFilename);
+                uploadPathPrefix,
+                uploadFilename);
         File file = null;
         try {
 //            上传文件
 //            3.在本地上传了临时文件获取文件到服务器
             file = File.createTempFile(uploadPath, null);
 //            把file传递给本地临时文件
-            processFile(inputSource,file);
+            processFile(inputSource, file);
 //            由于这个方法是接收file而不是multipartFile,所以要转换成file文件
 //            4.上传到对象存储里面(腾讯云的cos中)
             PutObjectResult putObjectResult = cosManager.putPictureObject(uploadPath, file);
 //            5.获取图片信息对象
             ImageInfo imageInfo = putObjectResult.getCiUploadResult().getOriginalInfo().getImageInfo();
             String format = imageInfo.getFormat();
-          //封装返回结果
+            //封装返回结果
             return buildResult(uploadPath, originalFilename, file, imageInfo);
         } catch (Exception e) {
             log.error("图片上传到存储失败", e);
@@ -76,8 +77,40 @@ public abstract class PictureUploadTemplate {
             deleteTempFile(file);
         }
     }
+
+    /**
+     * 根据url 校验文件
+     */
+    /**
+     * 封装返回结果
+     *
+     * @param uploadPath
+     * @param originalFilename
+     * @param file
+     * @return
+     */
+    private UploadPictureResult buildResult(String uploadPath, String originalFilename, File file, ImageInfo imageInfo) {
+        //            计算宽高比
+        int picWidth = imageInfo.getWidth();
+        int picHeight = imageInfo.getHeight();
+        double picScale = NumberUtil.round(picWidth * 1.0 / picWidth, 2).doubleValue();
+
+        //            封装返回结果
+        UploadPictureResult uploadPictureResult = new UploadPictureResult();
+        uploadPictureResult.setUrl(cosClientConfig.getHost() + "/" + uploadPath);
+        uploadPictureResult.setName(FileUtil.getSuffix(originalFilename));
+        uploadPictureResult.setPicSize(FileUtil.size(file));
+        uploadPictureResult.setPicWidth(picWidth);
+        uploadPictureResult.setPicHeight(picHeight);
+        uploadPictureResult.setPicScale(picScale);
+        uploadPictureResult.setPicFormat(imageInfo.getFormat());
+//            返回可访问的地址
+        return uploadPictureResult;
+    }
+
     /**
      * 校验输入源(本地文件或者url)
+     *
      * @param inputSource
      */
 
@@ -85,17 +118,19 @@ public abstract class PictureUploadTemplate {
 
     /**
      * 获取输入源的初始名称
+     *
      * @param inputSource
      * @return
      */
-    protected abstract String getOriginalFilename(Object inputSource) ;
+    protected abstract String getOriginalFilename(Object inputSource);
 
 
     /**
      * 处理输入源并生成本地临时文件
+     *
      * @param inputSource
      */
-    protected abstract void processFile(Object inputSource,File file) throws IOException;
+    protected abstract void processFile(Object inputSource, File file) throws IOException;
 
     /**
      * 校验文件
@@ -119,34 +154,4 @@ public abstract class PictureUploadTemplate {
 
         }
     }
-
-    /**
-     * 根据url 校验文件
-     */
-    /**
-     * 封装返回结果
-     * @param uploadPath
-     * @param originalFilename
-     * @param file
-     * @return
-     */
-    private UploadPictureResult buildResult(String uploadPath, String originalFilename, File file,ImageInfo imageInfo) {
-        //            计算宽高比
-        int picWidth = imageInfo.getWidth();
-        int picHeight = imageInfo.getHeight();
-        double picScale = NumberUtil.round(picWidth * 1.0 /picWidth,2).doubleValue();
-
-        //            封装返回结果
-        UploadPictureResult uploadPictureResult = new UploadPictureResult();
-        uploadPictureResult.setUrl(cosClientConfig.getHost() + "/" + uploadPath);
-        uploadPictureResult.setName(FileUtil.getSuffix(originalFilename));
-        uploadPictureResult.setPicSize(FileUtil.size(file));
-        uploadPictureResult.setPicWidth(picWidth);
-        uploadPictureResult.setPicHeight(picHeight);
-        uploadPictureResult.setPicScale(picScale);
-        uploadPictureResult.setPicFormat(imageInfo.getFormat());
-//            返回可访问的地址
-        return uploadPictureResult;
-    }
-
 }

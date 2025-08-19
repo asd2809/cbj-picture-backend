@@ -21,5 +21,10 @@ public class PictureUploadByBatchRequest implements Serializable {
      */
     private Integer count = 30;
 
+    /**
+     * 图片前缀词
+     */
+    private String namePrefix;
+
     private static final long serialVersionDIU = 1L;
 }
