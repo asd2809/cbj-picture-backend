@@ -9,9 +9,11 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.yupi.cbjpicturebackend.common.BaseResponse;
 import com.yupi.cbjpicturebackend.common.DeleteRequest;
 import com.yupi.cbjpicturebackend.common.ResultUtils;
+import com.yupi.cbjpicturebackend.constant.UserConstant;
 import com.yupi.cbjpicturebackend.exception.BusinessException;
 import com.yupi.cbjpicturebackend.exception.ErrorCode;
 import com.yupi.cbjpicturebackend.exception.ThrowUtils;
+import com.yupi.cbjpicturebackend.manager.CosManager;
 import com.yupi.cbjpicturebackend.manager.upload.PictureUpload;
 import com.yupi.cbjpicturebackend.manager.upload.PictureUploadTemplate;
 import com.yupi.cbjpicturebackend.manager.upload.UrlPictureUpload;
@@ -32,6 +34,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -57,6 +60,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
     private PictureUpload filePictureUpload;
     @Resource
     private UrlPictureUpload urlPictureUpload;
+    @Autowired
+    private CosManager cosManager;
 
 
     /**
@@ -80,7 +85,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
             Picture oldPicture = this.getById(pictureId);
             ThrowUtils.throwIF(oldPicture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
 //           仅限本人或管理员可以编辑图片
-            if (oldPicture.getUserId().equals(loginUser.getId()) || !userService.isAdmin(loginUser)) {
+            if (oldPicture.getUserId().equals(loginUser.getId())  && !userService.isAdmin(loginUser)) {
                 ThrowUtils.throwIF(true, ErrorCode.NO_AUTH_ERROR);
             }
         }
@@ -97,11 +102,15 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         Picture picture = new Picture();
         //BeanUtils.copyProperties(uploadPictureResult, picture);,不使用BeanUtil的原因是两者字段名存在不一样的
         picture.setUrl(uploadPictureResult.getUrl());
+        //存的是缩略图的url
+        picture.setThumbnailUrl(uploadPictureResult.getUrl());
+
         //支持外层传递图片名称
         String picName = uploadPictureResult.getName();
         if(pictureUploadRequest != null && StrUtil.isNotBlank(pictureUploadRequest.getPicName())) {
             picName = pictureUploadRequest.getPicName();
         }
+
         picture.setName(picName);
         picture.setPicSize(uploadPictureResult.getPicSize());
         picture.setPicWidth(uploadPictureResult.getPicWidth());
@@ -122,6 +131,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 //        如果是新增
 //        这个方法既可以进行更新也可以对数据库进行插入
         boolean result = this.saveOrUpdate(picture);
+        //todo 如果是更新（因为拼接上传路径有一个uuid，这个uuid是随机的），可以清理图片资源
+        this.clearPicture(picture);
         ThrowUtils.throwIF(!result, ErrorCode.PARAMS_ERROR, "图片上传失败");
         return PictureVO.objToVo(picture);
 
@@ -161,9 +172,9 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         }
 
 //        第一个参数是判断该id是否为空
-        queryWrapper.eq(ObjUtil.isEmpty(id), "id", id);
-        queryWrapper.eq(ObjUtil.isEmpty(userId), "userId", userId);
-        queryWrapper.like(StrUtil.isEmpty(name), "name", name);
+        queryWrapper.eq(ObjUtil.isNotEmpty(id), "id", id);
+        queryWrapper.eq(ObjUtil.isNotEmpty(userId), "userId", userId);
+        queryWrapper.like(StrUtil.isNotEmpty(name), "name", name);
         queryWrapper.like(StrUtil.isNotEmpty(introduction), "introduction", introduction);
         queryWrapper.like(StrUtil.isNotEmpty(picFormat), "picFormat", picFormat);
         queryWrapper.like(StrUtil.isNotEmpty(reviewMessage), "reviewMessage", reviewMessage);
@@ -171,7 +182,6 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         queryWrapper.eq(ObjUtil.isNotEmpty(picWidth), "picWidth", picWidth);
         queryWrapper.eq(ObjUtil.isNotEmpty(picHeight), "picHeight", picHeight);
         queryWrapper.eq(ObjUtil.isNotEmpty(searchText), "picSize", picSize);
-        queryWrapper.eq(ObjUtil.isNotEmpty(sortField), "sortField", picScale);
         queryWrapper.eq(ObjUtil.isNotEmpty(reviewStatus),"reviewStatus",reviewStatus);
         queryWrapper.eq(ObjUtil.isNotEmpty(reviewUserId), "reviewUserId", reviewUserId);
         //        JSON数组查询
@@ -181,7 +191,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
             }
         }
         //        排序
-        queryWrapper.orderBy(StrUtil.isNotEmpty(sortField), sortOrder.equals("ascend"), sortField);
+        queryWrapper.orderBy(StrUtil.isNotEmpty(sortField), "asecend".equals(sortOrder), sortField);
         return queryWrapper;
     }
 
@@ -259,12 +269,17 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         Picture picture = this.getById(id);
         ThrowUtils.throwIF(picture == null,ErrorCode.PARAMS_ERROR);
         //仅本人或管理员可以删除
-        if(!picture.getUserId().equals(loginUser.getId() )|| !userService.isAdmin(loginUser)){
+        if(!picture.getUserId().equals(loginUser.getId()) && !userService.isAdmin(loginUser) ){
             ThrowUtils.throwIF(true,ErrorCode.PARAMS_ERROR);
         }
+//        if(!userService.isAdmin(loginUser) ||!picture.getUserId().equals(loginUser.getId()) ){
+//            ThrowUtils.throwIF(true,ErrorCode.PARAMS_ERROR);
+//        }
         //3.操作数据库
         boolean result = this.removeById(id);
         ThrowUtils.throwIF(!result, ErrorCode.PARAMS_ERROR,"删除图片失败");
+        //清理对象存储的图片存储
+        this.clearPicture(picture);
         return ResultUtils.success(result);
     }
     /**
@@ -415,6 +430,32 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
             }}
         }
         return uploadCount;
+    }
+
+    //实现异步
+    @Async
+    @Override
+    public void clearPicture(Picture oldPicture) {
+        //判断图片是否被多条记录使用
+        String pictureUrl = oldPicture.getUrl();
+        long count = this.lambdaQuery()
+                .eq(Picture::getId,pictureUrl)
+                        .count();
+        if (count > 1) {
+            return;
+        }
+        //对象存储中的图片
+        cosManager.deleteObject(pictureUrl);
+        //删除对象存储中的搜缩略图
+        String thumbnailUrl = oldPicture.getThumbnailUrl();
+        if(StrUtil.isNotBlank(thumbnailUrl)){
+            cosManager.deleteObject(thumbnailUrl);
+        }
+        //删除在数据库中的存储
+//        if (oldPicture.getIsDelete() == 1) {
+//            this.removeById(oldPicture.getId());
+//        }
+
     }
 
 

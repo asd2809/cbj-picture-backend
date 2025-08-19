@@ -18,7 +18,10 @@ public class PictureVO {
      */
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
-
+    /**
+     * 缩略图url
+     */
+    private String thumbUrl;
     /**
      * 图片 url
      */

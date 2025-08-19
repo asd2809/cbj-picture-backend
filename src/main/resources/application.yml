@@ -2,6 +2,11 @@ server:
   port: 8123
   servlet:
     context-path: /api
+    #cookie
+    session:
+      cookie:
+        #30天过期
+        max-age: 2592000
 spring:
   #  日志输出颜色
   output:
@@ -21,6 +26,11 @@ spring:
     host: 127.0.0.1
     port: 6379
     timeout: 5000 #5s没连上redis会报错
+  #session
+  session:
+    store-type: redis
+    #30天后过期
+    timeout: 2592000
   #  开放更大的文件上传
   servlet:
     multipart:

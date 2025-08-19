@@ -166,7 +166,7 @@ public class PictrueController {
         int pageSize = pictureQueryRequest.getPageSize();
         //限制爬虫
         ThrowUtils.throwIF(pageSize > 20,ErrorCode.PARAMS_ERROR);
-//        普通用户默认只能看到审核通过的数据
+        //普通用户默认只能看到审核通过的数据
         pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
         //       操作数据库
         Page<Picture> picturePage = pictureService.page(new Page<>(current, pageSize),
@@ -273,7 +273,7 @@ public class PictrueController {
     @PostMapping("/edit")
     public BaseResponse<Picture> editPicture(PictureEditRequest pictureEditRequest,HttpServletRequest request){
 //        判断请求是否为空
-        ThrowUtils.throwIF(pictureEditRequest==null || pictureEditRequest.getId() <=0,ErrorCode.PARAMS_ERROR,"web传入的参数错误");
+        ThrowUtils.throwIF(pictureEditRequest == null || pictureEditRequest.getId() <= 0,ErrorCode.PARAMS_ERROR,"web传入的参数错误");
 //      数据库操作
         Picture picture = new Picture();
         BeanUtils.copyProperties(pictureEditRequest,picture);

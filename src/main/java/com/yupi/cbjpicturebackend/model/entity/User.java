@@ -2,6 +2,7 @@ package com.yupi.cbjpicturebackend.model.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
 
+import java.io.Serializable;
 import java.util.Date;
 
 import lombok.Data;
@@ -13,7 +14,7 @@ import lombok.Data;
  */
 @TableName(value = "user")
 @Data
-public class User {
+public class User implements Serializable {
     /**
      * id
      */
@@ -73,4 +74,5 @@ public class User {
     @TableField(exist = false)//对应数据库列名子
     private Integer isDelete;
 
+    private static final long serialVersionUID = 1L;
 }
