@@ -209,7 +209,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
         if (user == null) {
             return false;
         }
-        return !UserRoleEnum.ADMIN.getValue().equals(user.getUserRole());
+        return UserConstant.ADMIN_ROLE.equals(user.getUserRole());
     }
 }
 

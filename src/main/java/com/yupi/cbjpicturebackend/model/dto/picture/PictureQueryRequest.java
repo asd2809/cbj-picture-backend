@@ -77,6 +77,18 @@ public class PictureQueryRequest extends PageRequest implements Serializable {
      * 审核人ID
      */
     private Long reviewUserId;
+    /**
+     * 空间id
+     */
+
+    private Long spaceId;
+
+    /**
+     * 这个是控制，是否查spaceId为空的时候呗
+     * 在我们的查询逻辑中，如果为ture,则查询spaceIdw为null的情况
+     * 如果为false的话，spaceId查询的条件就是 where spaceId =#{spaceId}
+     */
+    private boolean nullSpaceId;
 
     private static final long serialVersionUID = 1L;
 
