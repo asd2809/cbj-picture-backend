@@ -74,7 +74,7 @@ create table if not exists space
     totalSize  bigint   default 0                 null comment '当前空间下图片的总大小',
     totalCount bigint   default 0                 null comment '当前空间下的图片数量',
     userId     bigint                             not null comment '创建用户id',
-    creatTime  datetime default CURRENT_TIMESTAMP not null comment '创建时间',
+    createTime  datetime default CURRENT_TIMESTAMP not null comment '创建时间',
     editTime   datetime default CURRENT_TIMESTAMP not null comment '编辑时间',
     updateTime datetime DEFAULT CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
     isDelete   tinyint  default 0                 not null comment '是否删除',
@@ -89,3 +89,4 @@ ALTER TABLE picture
     ADD COLUMN spaceId bigint null comment '空间id (为空表示公共空间)';
 -- 创建索引
 CREATE INDEX idx_spaceId ON picture (spaceId)
+

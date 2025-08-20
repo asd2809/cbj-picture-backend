@@ -4,7 +4,7 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.yupi.cbjpicturebackend.mapper.SpaceMapper">
 
-    <resultMap id="BaseResultMap" type="generator.domain.Space">
+    <resultMap id="BaseResultMap" type="com.yupi.cbjpicturebackend.model.entity.Space">
             <id property="id" column="id" />
             <result property="spaceName" column="spaceName" />
             <result property="spaceLevel" column="spaceLevel" />
@@ -13,7 +13,7 @@
             <result property="totalSize" column="totalSize" />
             <result property="totalCount" column="totalCount" />
             <result property="userId" column="userId" />
-            <result property="creatTime" column="creatTime" />
+            <result property="createTime" column="createTime" />
             <result property="editTime" column="editTime" />
             <result property="updateTime" column="updateTime" />
             <result property="isDelete" column="isDelete" />

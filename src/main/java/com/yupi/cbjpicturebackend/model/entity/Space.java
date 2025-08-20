@@ -62,7 +62,7 @@ public class Space implements Serializable {
     /**
      * 创建时间
      */
-    private Date creatTime;
+    private Date createTime;
 
     /**
      * 编辑时间
