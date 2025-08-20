@@ -1,8 +1,6 @@
 package com.yupi.cbjpicturebackend.controller;
 
 
-import cn.hutool.core.util.RandomUtil;
-import cn.hutool.json.JSON;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.github.benmanes.caffeine.cache.Cache;
@@ -12,20 +10,25 @@ import com.yupi.cbjpicturebackend.common.BaseResponse;
 import com.yupi.cbjpicturebackend.common.DeleteRequest;
 import com.yupi.cbjpicturebackend.common.ResultUtils;
 import com.yupi.cbjpicturebackend.constant.UserConstant;
+import com.yupi.cbjpicturebackend.exception.BusinessException;
 import com.yupi.cbjpicturebackend.exception.ErrorCode;
 import com.yupi.cbjpicturebackend.exception.ThrowUtils;
 import com.yupi.cbjpicturebackend.model.dto.picture.*;
+import com.yupi.cbjpicturebackend.model.dto.space.SpaceAddRequest;
 import com.yupi.cbjpicturebackend.model.entity.Picture;
+import com.yupi.cbjpicturebackend.model.entity.Space;
 import com.yupi.cbjpicturebackend.model.entity.User;
 import com.yupi.cbjpicturebackend.model.enums.PictureReviewStatusEnum;
 import com.yupi.cbjpicturebackend.model.vo.PictureTagCategory;
 import com.yupi.cbjpicturebackend.model.vo.PictureVO;
+import com.yupi.cbjpicturebackend.model.vo.SpaceVO;
 import com.yupi.cbjpicturebackend.service.PictureService;
+import com.yupi.cbjpicturebackend.service.SpaceService;
 import com.yupi.cbjpicturebackend.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.beans.BeanUtils;
-import org.springframework.context.annotation.Bean;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.web.bind.annotation.*;
@@ -34,7 +37,6 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.time.Duration;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -43,7 +45,7 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 @RestController
 @RequestMapping("/picture")
-public class PictrueController {
+public class PictureController {
 
     @Resource
     private PictureService pictureService;
@@ -53,6 +55,9 @@ public class PictrueController {
 
     @Resource
     private StringRedisTemplate stringRedisTemplate;
+
+    @Resource
+    private SpaceService spaceService;
     /**
      * 本地缓存
      */
@@ -62,14 +67,16 @@ public class PictrueController {
          // 缓存 5 分钟移除
                                     .expireAfterWrite(Duration.ofMillis(5))
                                     .build();
+
+
     /**
      * 上传图片
      */
     @PostMapping("/upload")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<PictureVO> uploadPicture(@RequestParam("file") MultipartFile multipartFile,
-                                          PictureUploadRequest pictureUploadRequest,
-                                          HttpServletRequest request
+                                                 PictureUploadRequest pictureUploadRequest,
+                                                 HttpServletRequest request
                                           ) {
         User LoginUser = userService.getLoginUser(request);
         PictureVO pictureVO = pictureService.uploadPicture(multipartFile,pictureUploadRequest,LoginUser);
@@ -92,9 +99,9 @@ public class PictrueController {
      */
     @PostMapping("/delete")
     public BaseResponse<Boolean> deletePicutre(DeleteRequest deleteRequest,HttpServletRequest request){
-//        服务类的代码应该写在这里的
-        BaseResponse<Boolean> booleanBaseResponse = pictureService.deletePicture(deleteRequest, request);
-        return booleanBaseResponse;
+        //服务类的代码应该写在这里的
+        pictureService.deletePicture(deleteRequest, request);
+        return ResultUtils.success(true);
     }
 
     /**
@@ -106,26 +113,27 @@ public class PictrueController {
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Boolean> updatePicture(PictureUpdateRequest pictureUpdateRequest,
                                                HttpServletRequest request) {
-//      1.判断传入的请求是否为空
+        //1.判断传入的请求是否为空
         ThrowUtils.throwIF(pictureUpdateRequest==null || pictureUpdateRequest.getId() <= 0,
                 ErrorCode.PARAMS_ERROR,"web请求的参数错误");
 
-//      2.操作数据库
-//      把传入的请求对象转换为picture
+        //2.操作数据库
+        //把传入的请求对象转换为picture
         Picture picture = new Picture();
         BeanUtils.copyProperties(pictureUpdateRequest,picture);
-//        注意将list转为string
+        //注意将list转为string
         picture.setTags(JSONUtil.toJsonStr(pictureUpdateRequest.getTags()));
-//        数据校验
+        //数据校验
         pictureService.validPicture(picture);
-//        先把请求的id通过数据库查询,是否存在这个图片
+        //先把请求的id通过数据库查询,是否存在这个图片
         Picture oldPicture = pictureService.getById(pictureUpdateRequest.getId());
         ThrowUtils.throwIF(oldPicture == null,ErrorCode.PARAMS_ERROR,"该图片不存在数据库中");
-//       补充过审
+        //补充过审
         User loginUser = userService.getLoginUser(request);
         pictureService.fillReviewParams(picture, loginUser);
+        //这个才是真正的进行更新操作
         boolean result = pictureService.updateById(picture);
-//       这个才是真正的进行更新操作
+
         ThrowUtils.throwIF(!result,ErrorCode.SYSTEM_ERROR,"数据库操作失败");
         return ResultUtils.success(true);
     }
@@ -166,22 +174,42 @@ public class PictrueController {
         int pageSize = pictureQueryRequest.getPageSize();
         //限制爬虫
         ThrowUtils.throwIF(pageSize > 20,ErrorCode.PARAMS_ERROR);
-        //普通用户默认只能看到审核通过的数据
-        pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
+        //空间权限校验
+        Long spaceId = pictureQueryRequest.getSpaceId();
+        if (spaceId == null) {
+            //普通用户默认只能看到审核通过的数据
+            pictureQueryRequest.setReviewStatus(PictureReviewStatusEnum.PASS.getValue());
+            //为了查询的时候使spaceId为null
+            pictureQueryRequest.setNullSpaceId(true);
+        }else{
+            //查询私有空间
+            User loginUser = userService.getLoginUser(request);
+            Space space = spaceService.getById(spaceId);
+            ThrowUtils.throwIF(space == null,ErrorCode.SYSTEM_ERROR,"私有空间不存在");
+            if (!space.getUserId().equals(loginUser.getId())) {
+                throw new BusinessException(ErrorCode.NO_AUTH_ERROR,"没有空间权限");
+            }
+            //这个其实可以不写，因为只有NullSpaceId为true的时候，才会使查询的时候spaceId为null的条件
+            pictureQueryRequest.setNullSpaceId(false);
+
+        }
         //       操作数据库
         Page<Picture> picturePage = pictureService.page(new Page<>(current, pageSize),
                 pictureService.getQueryWrapper(pictureQueryRequest));
-        ThrowUtils.throwIF(picturePage==null,ErrorCode.SYSTEM_ERROR,"数据库操作失败");
+        List<Picture> pictureList = picturePage.getRecords();
+        ThrowUtils.throwIF(picturePage.getRecords().isEmpty(),ErrorCode.SYSTEM_ERROR,"数据库操作失败");
         return ResultUtils.success(pictureService.getPictureVOPage(picturePage,request));
     }
     /**
-     * 分页查询(封装类)
+     * 分页查询(封装类)(带有缓存)
      * @param pictureQueryRequest
      * @return
      */
+    //因为开始添加了私有空间，就没必要再有缓存处理了，因为用户的私有空间没必要缓存
+    @Deprecated
     @PostMapping("/list/page/vo/cache")
     public BaseResponse<Page<PictureVO>> listPictureVOByPageWithCache(@RequestBody PictureQueryRequest pictureQueryRequest,
-                                                             HttpServletRequest request){
+                                                                      HttpServletRequest request) {
 
         //先判断请求是否为空
         ThrowUtils.throwIF(pictureQueryRequest==null ,
@@ -255,12 +283,20 @@ public class PictrueController {
      * @return
      */
     @GetMapping("/get/vo")
-    public BaseResponse<PictureVO> getPictureVOById(Long id){
+    public BaseResponse<PictureVO> getPictureVOById(Long id,HttpServletRequest request){
         //1.判断请求是否为空
         ThrowUtils.throwIF(id==null,ErrorCode.PARAMS_ERROR,"传入图片的id为空");
         //2.操作数据库
         Picture picture = pictureService.getById(id);
         ThrowUtils.throwIF(picture==null,ErrorCode.SYSTEM_ERROR,"查不到这个图片");
+        User loginUser = userService.getLoginUser(request);
+        //先判断该图片是否有spaceId，即这个图片是不是某个用户的私有
+        Long spaceId = picture.getSpaceId();
+        if (spaceId != null){
+            //公共图库的图片是随便获取的
+            //但是该图片存储的私有空间，可能不是该用户的
+            pictureService.checkPictureAuth(loginUser,picture);
+        }
         return ResultUtils.success(PictureVO.objToVo(picture));
     }
 
@@ -272,30 +308,10 @@ public class PictrueController {
      */
     @PostMapping("/edit")
     public BaseResponse<Picture> editPicture(PictureEditRequest pictureEditRequest,HttpServletRequest request){
-//        判断请求是否为空
+        //判断请求是否为空
         ThrowUtils.throwIF(pictureEditRequest == null || pictureEditRequest.getId() <= 0,ErrorCode.PARAMS_ERROR,"web传入的参数错误");
-//      数据库操作
-        Picture picture = new Picture();
-        BeanUtils.copyProperties(pictureEditRequest,picture);
-//        注意tags的转换
-        picture.setTags(JSONUtil.toJsonStr(pictureEditRequest.getTags()));
-//      设置编辑时间
-        picture.setEditTime(new Date());
-//      数据校验
-        pictureService.validPicture(picture);
         User loginUser = userService.getLoginUser(request);
-//       判断是否存在
-        long id = pictureEditRequest.getId();
-        Picture oldPicture = pictureService.getById(id);
-//      仅本人或管理员可以编辑
-        if(!oldPicture.getUserId().equals(loginUser.getId()) || !UserConstant.ADMIN_ROLE.equals(loginUser.getUserRole())){
-            ThrowUtils.throwIF(true,ErrorCode.NO_AUTH_ERROR,"编辑图片既不是本人也不是管理员");
-        }
-//      补充过审
-        pictureService.fillReviewParams(picture, loginUser);
-        boolean result = pictureService.updateById(picture);
-        ThrowUtils.throwIF(!result,ErrorCode.SYSTEM_ERROR,"数据库操作失败");
-
+        Picture picture = pictureService.editPicture(pictureEditRequest,loginUser);
         return ResultUtils.success(picture);
     }
 

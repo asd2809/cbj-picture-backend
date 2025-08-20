@@ -3,7 +3,6 @@ package com.yupi.cbjpicturebackend.model.vo;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
-import com.baomidou.mybatisplus.annotation.TableLogic;
 import com.yupi.cbjpicturebackend.model.entity.Picture;
 import lombok.Data;
 import org.springframework.beans.BeanUtils;
@@ -92,6 +91,10 @@ public class PictureVO {
      */
     private Date updateTime;
 
+    /**
+     *空间id
+     */
+    private Long spaceId;
     /**
      * 创建用户信息
      */
