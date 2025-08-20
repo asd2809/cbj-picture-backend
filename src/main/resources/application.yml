@@ -40,6 +40,7 @@ spring:
     active: local
 mybatis-plus:
   configuration:
+    # 不会自动把数据库的下划线列名映射到驼峰字段。
     map-underscore-to-camel-case: false
     #    仅在开发环境打印日志
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
@@ -60,11 +61,3 @@ knife4j:
         api-rule: package
         api-rule-resources:
           - com.yupi.cbjpicturebackend.controller
-#对象存储
-cos:
-  client:
-    host: xxx
-    secretId: xxx
-    secretKey: xxx
-    region: xxx
-    bucket: xxx

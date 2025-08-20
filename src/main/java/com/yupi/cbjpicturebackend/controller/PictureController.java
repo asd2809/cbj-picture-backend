@@ -98,7 +98,7 @@ public class PictureController {
      * 根据id删除图片
      */
     @PostMapping("/delete")
-    public BaseResponse<Boolean> deletePicutre(DeleteRequest deleteRequest,HttpServletRequest request){
+    public BaseResponse<Boolean> deletePicture(DeleteRequest deleteRequest,HttpServletRequest request){
         //服务类的代码应该写在这里的
         pictureService.deletePicture(deleteRequest, request);
         return ResultUtils.success(true);
@@ -197,7 +197,7 @@ public class PictureController {
         Page<Picture> picturePage = pictureService.page(new Page<>(current, pageSize),
                 pictureService.getQueryWrapper(pictureQueryRequest));
         List<Picture> pictureList = picturePage.getRecords();
-        ThrowUtils.throwIF(picturePage.getRecords().isEmpty(),ErrorCode.SYSTEM_ERROR,"数据库操作失败");
+//        ThrowUtils.throwIF(picturePage.getRecords().isEmpty(),ErrorCode.SYSTEM_ERROR,"数据库操作失败");
         return ResultUtils.success(pictureService.getPictureVOPage(picturePage,request));
     }
     /**
