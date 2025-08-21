@@ -9,7 +9,10 @@ public class UploadPictureResult {
      * 图片 url
      */
     private String url;
-
+    /**
+     * 图片主色调
+     */
+    private String picColor;
     /**
      * 缩略图的url
      */

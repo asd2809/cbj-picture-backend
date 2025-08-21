@@ -131,4 +131,13 @@ public interface PictureService extends IService<Picture> {
      * @return
      */
     Picture editPicture(PictureEditRequest pictureEditRequest, User loginUser);
+
+    /**
+     * @param spaceId
+     * @param picColor
+     * @param loginUser
+     * @return
+     */
+    List<PictureVO> searchPictureByColor(Long spaceId, String picColor, User loginUser);
+
 }

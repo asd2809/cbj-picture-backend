@@ -64,7 +64,7 @@ public class UserController {
     /**
      * 用户推出登录
      */
-    @PostMapping("/logOut")
+    @PostMapping("/logout")
     public BaseResponse<Boolean> userLogout(HttpServletRequest request) {
         ThrowUtils.throwIF(request == null, ErrorCode.PARAMS_ERROR);
         boolean result = userService.userLoginOut(request);

@@ -18,6 +18,10 @@ public class PictureVO {
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
     /**
+     * 图片主色调
+     */
+    private String picColor;
+    /**
      * 缩略图url
      */
     private String thumbUrl;
