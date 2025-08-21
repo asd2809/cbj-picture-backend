@@ -160,7 +160,11 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         if(pictureUploadRequest != null && StrUtil.isNotBlank(pictureUploadRequest.getPicName())) {
             picName = pictureUploadRequest.getPicName();
         }
-
+        //给图片名设置默认值
+        if (StrUtil.isEmpty(picName)) {
+            //给图片名字默认设置
+            picName = "img_" + UUID.randomUUID().toString().substring(0,8);
+        }
         picture.setName(picName);
         picture.setPicSize(uploadPictureResult.getPicSize());
         picture.setPicWidth(uploadPictureResult.getPicWidth());
@@ -354,7 +358,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         Long id = deleteRequest.getId();
         //2.判断数据库中的图片是否存在
         Picture picture = this.getById(id);
-        ThrowUtils.throwIF(picture == null,ErrorCode.PARAMS_ERROR);
+        ThrowUtils.throwIF(picture == null,ErrorCode.PARAMS_ERROR,"查询数据库失败");
         //空间与公共图库的权限管理
         checkPictureAuth(loginUser,picture);
 //        if(!userService.isAdmin(loginUser) ||!picture.getUserId().equals(loginUser.getId()) ){
