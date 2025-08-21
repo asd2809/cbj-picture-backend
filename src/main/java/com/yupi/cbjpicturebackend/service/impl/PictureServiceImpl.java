@@ -102,10 +102,13 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 //            更新
             pictureId = pictureUploadRequest.getId();
         }
+
         //3.如果是更新，判断图片是否存在
+        //把旧图片放在外面，方方便删除
+        Picture oldPicture;
         if (pictureId != null) {
 //
-            Picture oldPicture = this.getById(pictureId);
+            oldPicture = this.getById(pictureId);
             ThrowUtils.throwIF(oldPicture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
 //           仅限本人或管理员可以编辑图片
             if (oldPicture.getUserId().equals(loginUser.getId())  && !userService.isAdmin(loginUser)) {
@@ -124,6 +127,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
                 }
             }
 
+        } else {
+            oldPicture = null;
         }
         //4.上传图片
         //按照用户id划分目录 =>私有图片划分目录
@@ -146,7 +151,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         //BeanUtils.copyProperties(uploadPictureResult, picture);,不使用BeanUtil的原因是两者字段名存在不一样的
         picture.setUrl(uploadPictureResult.getUrl());
         //存的是缩略图的url
-        picture.setThumbnailUrl(uploadPictureResult.getUrl());
+        picture.setThumbnailUrl(uploadPictureResult.getThumbnailUrl());
         //存放的是空间的id
         picture.setSpaceId(spaceId);
 
@@ -175,26 +180,34 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         }
 //        如果是新增
 //        这个方法既可以进行更新也可以对数据库进行插入
-        //开启事务
-        Long finalSpaceId = spaceId;
+//        //开启事务
+//        Long finalSpaceId = spaceId;
         //牺牲部分业务，来使代码的舒服
+        Long finalSpaceId = spaceId;
+        //确保清除cos上的文件是旧图片
+        Picture finalOldPicture = oldPicture;
         transactionTemplate.execute(status -> {
             //插入数据
             boolean result = this.saveOrUpdate(picture);
-            //todo 如果是更新（因为拼接上传路径有一个uuid，这个uuid是随机的），可以清理图片资源
-            this.clearPicture(picture);
             ThrowUtils.throwIF(!result, ErrorCode.PARAMS_ERROR, "图片上传失败");
-            //更新空间的使用额度
-            boolean update =spaceService.lambdaUpdate()
-                    .eq(Space::getId,finalSpaceId)
-                    .setSql("totalSize = totalSize + " + picture.getPicSize())
-                    .setSql("totalCount = totalCount + 1")
-                    .update();
-            ThrowUtils.throwIF(!update, ErrorCode.OPERATION_ERROR, "额度更新失败");
+            //todo 如果是更新（因为拼接上传路径有一个uuid，这个uuid是随机的），可以清理图片资源
+            if (finalOldPicture != null) {
+                this.clearPicture(finalOldPicture);
+            }
+            //如果finalSpaceId为空，则不上传到私有空间中
+            if(ObjUtil.isNotEmpty(finalSpaceId) ) {
+                //更新空间的使用额度，更新成功为true
+                boolean update =spaceService.lambdaUpdate()
+                        .eq(Space::getId, finalSpaceId)
+                        .setSql("totalSize = totalSize + " + picture.getPicSize())
+                        .setSql("totalCount = totalCount + 1")
+                        .update();
+                ThrowUtils.throwIF(!update, ErrorCode.OPERATION_ERROR, "额度更新失败");
+            }
             //随便返回一个，因为用不到
             return null;
         });
-
+        //更新操作，用来删除存在cos上的服务，删除旧的图片
         return PictureVO.objToVo(picture);
 
     }
@@ -357,13 +370,17 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
             //todo 如果是更新（因为拼接上传路径有一个uuid，这个uuid是随机的），可以清理图片资源
             this.clearPicture(picture);
             ThrowUtils.throwIF(!result, ErrorCode.PARAMS_ERROR,"删除图片失败");
-            //更新空间的使用额度
-            boolean update =spaceService.lambdaUpdate()
-                    .eq(Space::getId,finalSpaceId)
-                    .setSql("totalSize = totalSize - " + picture.getPicSize())
-                    .setSql("totalCount = totalCount - 1")
-                    .update();
-            ThrowUtils.throwIF(!update, ErrorCode.OPERATION_ERROR, "额度更新失败");
+            if (picture.getSpaceId() != null) {
+                //更新空间的使用额度
+                boolean update =spaceService.lambdaUpdate()
+                        .eq(Space::getId,finalSpaceId)
+                        .setSql("totalSize = totalSize - " + picture.getPicSize())
+                        .setSql("totalCount = totalCount - 1")
+                        .update();
+                ThrowUtils.throwIF(!update, ErrorCode.OPERATION_ERROR, "额度更新失败");
+            }
+            //用于清理cos空间
+            this.clearPicture(picture);
             //随便返回一个，因为用不到
             return result;
         });
@@ -417,7 +434,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         String reviewMessage = pictureReviewRequest.getReviewMessage();
 
         PictureReviewStatusEnum reviewStatusEnum = PictureReviewStatusEnum.getEnumByValue(reviewStatus);
-        if (id == null || reviewStatusEnum == null || PictureReviewStatusEnum.REVIEWING.equals(reviewStatusEnum)) {
+        if (id == null || reviewStatusEnum == null ) {
             ThrowUtils.throwIF(true, ErrorCode.PARAMS_ERROR);
         }
         //2.判断图片是否存在
@@ -433,6 +450,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         BeanUtils.copyProperties(oldPicture, updatePicture);
         updatePicture.setReviewerId(loginUser.getId());
         updatePicture.setReviewMessage(reviewMessage);
+        updatePicture.setReviewStatus(reviewStatusEnum.getValue());
 
         boolean result = this.updateById(updatePicture);
         ThrowUtils.throwIF(!result, ErrorCode.OPERATION_ERROR, "数据库操作失败");
@@ -474,9 +492,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         String fetchUrl = String.format("https://cn.bing.com/images/async?q=%s&mmasync=1", searchText);
         Document document = null;
         try {
-
             document = Jsoup.connect(fetchUrl).get();
-        } catch (Exception e) {
+        }catch (Exception e) {
             log.error("获取页面失败", e);
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "获取页面失败");
         }
@@ -502,7 +519,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
             int questMarkIndex = fileUrl.indexOf("?");
             //没找到questMarkIndex为-1
             if (questMarkIndex > -1) {
-                fileUrl = fileUrl.substring(0, questMarkIndex);
+                fileUrl = fileUrl.substring(0, questMarkIndex) ;
             }
             //4.上传图片
             PictureUploadRequest pictureUploadRequest = new PictureUploadRequest();

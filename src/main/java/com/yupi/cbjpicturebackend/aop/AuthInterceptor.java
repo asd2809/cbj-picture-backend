@@ -42,7 +42,6 @@ public class AuthInterceptor {
     public Object doInterceptor(ProceedingJoinPoint joinPoint, AuthCheck authCheck) throws Throwable {
 //        获取的是AuthCheck()里写的值
         String mustRole = authCheck.mustRole();
-        log.info("查看获取的mustRole<UNK>" + mustRole);
         RequestAttributes requestAttributes = RequestContextHolder.currentRequestAttributes();
         HttpServletRequest request = ((ServletRequestAttributes) requestAttributes).getRequest();
 //        获取当前用户

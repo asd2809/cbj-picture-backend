@@ -1,10 +1,10 @@
 package com.yupi.cbjpicturebackend.controller;
 
 
+import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.bean.copier.CopyOptions;
 import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.github.benmanes.caffeine.cache.Cache;
-import com.github.benmanes.caffeine.cache.Caffeine;
 import com.yupi.cbjpicturebackend.annotation.AuthCheck;
 import com.yupi.cbjpicturebackend.common.BaseResponse;
 import com.yupi.cbjpicturebackend.common.DeleteRequest;
@@ -13,29 +13,20 @@ import com.yupi.cbjpicturebackend.constant.UserConstant;
 import com.yupi.cbjpicturebackend.exception.ErrorCode;
 import com.yupi.cbjpicturebackend.exception.ThrowUtils;
 import com.yupi.cbjpicturebackend.model.dto.space.*;
-import com.yupi.cbjpicturebackend.model.entity.Picture;
 import com.yupi.cbjpicturebackend.model.entity.Space;
 import com.yupi.cbjpicturebackend.model.entity.User;
 import com.yupi.cbjpicturebackend.model.enums.SpaceLevelEnum;
 import com.yupi.cbjpicturebackend.model.vo.SpaceVO;
 import com.yupi.cbjpicturebackend.service.SpaceService;
 import com.yupi.cbjpicturebackend.service.UserService;
-import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.codec.digest.DigestUtils;
-import org.springframework.beans.BeanUtils;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
-import java.time.Duration;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -49,6 +40,22 @@ public class SpaceController {
     @Resource
     private UserService userService;
 
+    /**
+     * 创建空间
+     * @param spaceAddRequest
+     * @param request
+     * @return
+     */
+    @PostMapping("/add")
+    public BaseResponse<Long> addSpace(@RequestBody SpaceAddRequest spaceAddRequest, HttpServletRequest request){
+        //1.检验参数
+        ThrowUtils.throwIF(spaceAddRequest==null,ErrorCode.PARAMS_ERROR,"请求参数错误");
+        //2.获取当前用户状态
+        User loginUser = userService.getLoginUser(request);
+        //3.创建空间
+        long result = spaceService.addSpace(spaceAddRequest, loginUser);
+        return ResultUtils.success(result);
+    }
     /**
      * 根据id删除空间
      */
@@ -89,25 +96,55 @@ public class SpaceController {
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Boolean> updateSpace(SpaceUpdateRequest spaceUpdateRequest,
                                                HttpServletRequest request) {
-//      1.判断传入的请求是否为空
+        //1.判断传入的请求是否为空
         ThrowUtils.throwIF(spaceUpdateRequest==null || spaceUpdateRequest.getId() <= 0,
                 ErrorCode.PARAMS_ERROR,"web请求的参数错误");
 
-//      2.操作数据库
-//      把传入的请求对象转换为space
-        Space space = new Space();
-        BeanUtils.copyProperties(spaceUpdateRequest,space);
+        //      2.操作数据库
+        //把传入的请求对象转换为space
+        Space space = spaceService.getById(spaceUpdateRequest.getId());
+        BeanUtil.copyProperties(spaceUpdateRequest, space, CopyOptions.create().setIgnoreNullValue(true));
         //自动填充数据
         spaceService.fillSpaceBySpaceLevel(space);
         //数据校验
         spaceService.validSpace(space,false);
-//        先把请求的id通过数据库查询,是否存在这个空间
+        //先把请求的id通过数据库查询,是否存在这个空间
         Space oldSpace = spaceService.getById(spaceUpdateRequest.getId());
         ThrowUtils.throwIF(oldSpace == null,ErrorCode.PARAMS_ERROR,"该空间不存在数据库中");
         boolean result = spaceService.updateById(space);
-//       这个才是真正的进行更新操作
+        //这个才是真正的进行更新操作
         ThrowUtils.throwIF(!result,ErrorCode.SYSTEM_ERROR,"数据库操作失败");
         return ResultUtils.success(true);
+    }
+    /**
+     * 管理员通过id获取空间
+     * @param id
+     * @return
+     */
+    @PostMapping("/get")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public BaseResponse<Space> getSpaceById(Long id){
+        //1.判断请求是否为空
+        ThrowUtils.throwIF(id==null,ErrorCode.PARAMS_ERROR,"传入空间的id为空");
+        //2.操作数据库
+        Space space = spaceService.getById(id);
+        ThrowUtils.throwIF(space==null,ErrorCode.SYSTEM_ERROR,"查不到这个空间");
+        return ResultUtils.success(space);
+    }
+
+    /**
+     * 根据id查询空间(封装类)
+     * @param id
+     * @return
+     */
+    @GetMapping("/get/vo")
+    public BaseResponse<SpaceVO> getSpaceVOById(Long id){
+        //1.判断请求是否为空
+        ThrowUtils.throwIF(id==null,ErrorCode.PARAMS_ERROR,"传入空间的id为空");
+        //2.操作数据库
+        Space space = spaceService.getById(id);
+        ThrowUtils.throwIF(space==null,ErrorCode.SYSTEM_ERROR,"查不到这个空间");
+        return ResultUtils.success(SpaceVO.objToVo(space));
     }
 
     /**
@@ -152,39 +189,6 @@ public class SpaceController {
         ThrowUtils.throwIF(spacePage==null,ErrorCode.SYSTEM_ERROR,"数据库操作失败");
         return ResultUtils.success(spaceService.getSpaceVOPage(spacePage,request));
     }
-
-
-    /**
-     * 管理员通过id获取空间
-     * @param id
-     * @return
-     */
-    @PostMapping("/get")
-    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
-    public BaseResponse<Space> getSpaceById(Long id){
-        //1.判断请求是否为空
-        ThrowUtils.throwIF(id==null,ErrorCode.PARAMS_ERROR,"传入空间的id为空");
-        //2.操作数据库
-        Space space = spaceService.getById(id);
-        ThrowUtils.throwIF(space==null,ErrorCode.SYSTEM_ERROR,"查不到这个空间");
-        return ResultUtils.success(space);
-    }
-
-    /**
-     * 根据id查询空间(封装类)
-     * @param id
-     * @return
-     */
-    @GetMapping("/get/vo")
-    public BaseResponse<SpaceVO> getSpaceVOById(Long id){
-        //1.判断请求是否为空
-        ThrowUtils.throwIF(id==null,ErrorCode.PARAMS_ERROR,"传入空间的id为空");
-        //2.操作数据库
-        Space space = spaceService.getById(id);
-        ThrowUtils.throwIF(space==null,ErrorCode.SYSTEM_ERROR,"查不到这个空间");
-        return ResultUtils.success(SpaceVO.objToVo(space));
-    }
-
     /**
      * 编辑空间(主要是用户使用)
      * @param spaceEditRequest
@@ -195,9 +199,10 @@ public class SpaceController {
     public BaseResponse<Space> editSpace(SpaceEditRequest spaceEditRequest,HttpServletRequest request){
         //判断请求是否为空
         ThrowUtils.throwIF(spaceEditRequest == null || spaceEditRequest.getId() <= 0,ErrorCode.PARAMS_ERROR,"web传入的参数错误");
-        //数据库操作
-        Space space = new Space();
-        BeanUtils.copyProperties(spaceEditRequest,space);
+        //数据库操作，先通过传入的id获取数据库中对应的space表
+        Space space = spaceService.getById(spaceEditRequest.getId());
+        //这个工具可以保证，当spaceEditRequest传入的属性为空的时候，不会赋值给space
+        BeanUtil.copyProperties(spaceEditRequest, space, CopyOptions.create().setIgnoreNullValue(true));
         //设置编辑时间
         space.setEditTime(new Date());
         //自动填充数据
@@ -218,16 +223,7 @@ public class SpaceController {
 
         return ResultUtils.success(space);
     }
-    @PostMapping("/add")
-    public BaseResponse<Long> getSpaceAddRequest(@RequestBody SpaceAddRequest spaceAddRequest, HttpServletRequest request){
-        //1.检验参数
-        ThrowUtils.throwIF(spaceAddRequest==null,ErrorCode.PARAMS_ERROR,"请求参数错误");
-        //2.获取当前用户状态
-        User loginUser = userService.getLoginUser(request);
-        //3.创建空间
-        long result = spaceService.addSpace(spaceAddRequest, loginUser);
-        return ResultUtils.success(result);
-    }
+
 
     /**
      * 获取所有空间级别
@@ -245,7 +241,6 @@ public class SpaceController {
                 .collect(Collectors.toList());
         return ResultUtils.success(spaceLevelList);
     }
-
 
 
 

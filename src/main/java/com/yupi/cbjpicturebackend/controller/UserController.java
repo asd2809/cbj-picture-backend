@@ -27,12 +27,10 @@ public class UserController {
 
     @Resource
     private UserService userService;
-
     /***
      *
      * 用户注册
      */
-
     @PostMapping("/register")
     public BaseResponse<Long> userRegister(@RequestBody UserRegisterRequest userRegisterRequest) {
         ThrowUtils.throwIF(userRegisterRequest == null, ErrorCode.PARAMS_ERROR);
@@ -50,11 +48,8 @@ public class UserController {
     @PostMapping("/login")
     public BaseResponse<LoginUserVO> userLogin(@RequestBody UserLoginRequest userLoginRequest, HttpServletRequest request) {
         ThrowUtils.throwIF(userLoginRequest == null, ErrorCode.PARAMS_ERROR);
-
         String userAccount = userLoginRequest.getUserAccount();
         String userPassword = userLoginRequest.getUserPassword();
-
-
         LoginUserVO result = userService.userLogin(userAccount, userPassword, request);
         return ResultUtils.success(result);
     }
@@ -62,27 +57,25 @@ public class UserController {
      * 获取当前用户
      */
     @GetMapping("/get/login")
-    public BaseResponse<LoginUserVO> userGetLogin(HttpServletRequest request) {
+    public BaseResponse<LoginUserVO> getLoginUser(HttpServletRequest request) {
         User loginUser = userService.getLoginUser(request);
         return ResultUtils.success(userService.getLoginUserVO(loginUser));
     }
     /**
-     * 用户注销
+     * 用户推出登录
      */
-    @PostMapping("/logout")
+    @PostMapping("/logOut")
     public BaseResponse<Boolean> userLogout(HttpServletRequest request) {
         ThrowUtils.throwIF(request == null, ErrorCode.PARAMS_ERROR);
         boolean result = userService.userLoginOut(request);
         return ResultUtils.success(result);
     }
-
     /**
      * 创建用户
      * @param userAddRequest
      * @return
      */
     @PostMapping("/add")
-//    添加权限
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Long> addUser(@RequestBody UserAddRequest userAddRequest) {
         ThrowUtils.throwIF(userAddRequest == null, ErrorCode.PARAMS_ERROR);
@@ -140,11 +133,11 @@ public class UserController {
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
     public BaseResponse<Boolean> updateUser(@RequestBody UserUpdateRequest userUpdateRequest) {
 //        1.判断传入的对象是否为空
-        ThrowUtils.throwIF(userUpdateRequest == null || userUpdateRequest.getId() == null, ErrorCode.PARAMS_ERROR);
+        ThrowUtils.throwIF(userUpdateRequest == null || userUpdateRequest.getId() == null, ErrorCode.PARAMS_ERROR,"需要用户id");
         User user = new User();
         BeanUtils.copyProperties(userUpdateRequest, user);
         boolean result = userService.updateById(user);
-        ThrowUtils.throwIF(!result, ErrorCode.OPERATION_ERROR);
+        ThrowUtils.throwIF(!result, ErrorCode.OPERATION_ERROR,"数据库操作失败");
         return ResultUtils.success(true);
     }
 

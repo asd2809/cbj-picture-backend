@@ -9,6 +9,7 @@ import java.io.Serializable;
  */
 @Data
 public class UserUpdateRequest implements Serializable {
+
     /**
      * id
      */
@@ -31,8 +32,11 @@ public class UserUpdateRequest implements Serializable {
 
     /**
      * 用户角色：user/admin
+     *因为修改用户的只能是管理员，所以，为了在修改的时候
+     *不会因为忘记把用户权限填加上，在这个类中用户权限默认为admin
      */
-    private String userRole;
+
+    private final String userRole = "admin";
 
     private static final long serialversionUID = 1L;
 }

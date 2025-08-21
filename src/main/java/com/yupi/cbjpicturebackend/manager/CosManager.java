@@ -76,12 +76,13 @@ public class CosManager {
         //FileUtil.mainName，获取文件主名称(去掉路径和文件后缀名)
         //FileUtil.getSuffix获取文件名后缀
         if (file.length() > 2* 1024){
-            String thumbnailKey = FileUtil.mainName(key) + ".thumb" + FileUtil.getSuffix(key);
+            String thumbnailKey = FileUtil.mainName(key) + ".thumb" +  "." +FileUtil.getSuffix(key);
             thumbnailRule.setFileId(thumbnailKey);
             thumbnailRule.setRule(String.format("imageMogr2/thumbnail/%sx%s>",128,128));
             thumbnailRule.setBucket(cosClientConfig.getBucket());
             rule.add(thumbnailRule);
         }
+
 
         picOperations.setRules(rule);
         putObjectRequest.setPicOperations(picOperations);
@@ -90,7 +91,7 @@ public class CosManager {
     }
 
     /**
-     *
+     *删除图片
      * @param key
      */
     public void deleteObject(String key) {

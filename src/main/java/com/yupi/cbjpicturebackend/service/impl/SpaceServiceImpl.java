@@ -177,6 +177,8 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
 
     @Override
     public void fillSpaceBySpaceLevel(Space space) {
+        //传入的时候检验空间级别是否存在
+        ThrowUtils.throwIF(space.getSpaceLevel() == null, ErrorCode.PARAMS_ERROR, "需要提供空间级别");
         SpaceLevelEnum spaceLevelEnum = SpaceLevelEnum.getSpaceLevelEnum(space.getSpaceLevel());
         if (spaceLevelEnum == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "空间级别不存在");
