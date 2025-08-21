@@ -23,6 +23,10 @@ public class Picture {
     @TableId(type = IdType.ASSIGN_ID)
     private Long id;
     /**
+     * 图片主色调
+     */
+    private String picColor;
+    /**
      * 审核状态: 0-待审核;1-通过;2-拒绝
      */
     private Integer reviewStatus;

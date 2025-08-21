@@ -29,6 +29,7 @@ import com.yupi.cbjpicturebackend.model.entity.Picture;
 import com.yupi.cbjpicturebackend.mapper.PictureMapper;
 import com.yupi.cbjpicturebackend.service.SpaceService;
 import com.yupi.cbjpicturebackend.service.UserService;
+import com.yupi.cbjpicturebackend.utils.ColorSimilarUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -39,10 +40,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.web.bind.annotation.RequestBody;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.awt.*;
 import java.util.*;
+import java.util.List;
 import java.util.stream.Collectors;
 
 /**
@@ -172,6 +176,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         picture.setPicScale(uploadPictureResult.getPicScale());
         picture.setPicFormat(uploadPictureResult.getPicFormat());
         picture.setUserId(loginUser.getId()); // ✅ 补充用户ID
+        picture.setPicColor(uploadPictureResult.getPicColor());
 //        补充过审参数
         this.fillReviewParams(picture, loginUser);
         //5.保存到数据库
@@ -240,6 +245,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         String sortField = pictureQueryRequest.getSortField();
         String sortOrder = pictureQueryRequest.getSortOrder();
         Long spaceId = pictureQueryRequest.getSpaceId();
+        Date endEditTime = pictureQueryRequest.getEndEditTIme();
+        Date startEditTime = pictureQueryRequest.getStartEditTIme();
         boolean nullSpaceId = pictureQueryRequest.isNullSpaceId();
 
 //        从多字段中搜索
@@ -275,6 +282,11 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         queryWrapper.eq(ObjUtil.isNotEmpty(searchText), "picSize", picSize);
         queryWrapper.eq(ObjUtil.isNotEmpty(reviewStatus),"reviewStatus",reviewStatus);
         queryWrapper.eq(ObjUtil.isNotEmpty(reviewUserId), "reviewUserId", reviewUserId);
+        //大于等于startEditTime
+        queryWrapper.ge(ObjUtil.isNotEmpty(endEditTime), "endEditTIme", startEditTime);
+        //小于endEditTime
+        queryWrapper.lt(ObjUtil.isNotEmpty(endEditTime), "endEditTIme", endEditTime);
+        //以上来查询条件筛选出endEditTIme 在 [startEditTIme, endEditTIme) 区间内的数据
         //        JSON数组查询
         if (CollUtil.isNotEmpty(tags)) {
             for (String tag : tags) {
@@ -545,7 +557,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
     }
 
     @Override
-    public Picture editPicture(PictureEditRequest pictureEditRequest,User loginUser) {
+    public Picture editPicture(@RequestBody PictureEditRequest pictureEditRequest, User loginUser) {
         //数据库操作
         Picture picture = new Picture();
         BeanUtils.copyProperties(pictureEditRequest,picture);
@@ -557,7 +569,9 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         this.validPicture(picture);
         //判断是否存在
         long id = pictureEditRequest.getId();
+        //查询数据库
         Picture oldPicture = this.getById(id);
+
         //仅本人或管理员可以编辑
         this.checkPictureAuth(loginUser,oldPicture);
         //补充过审
@@ -565,6 +579,55 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         boolean result = this.updateById(picture);
         ThrowUtils.throwIF(!result,ErrorCode.SYSTEM_ERROR,"数据库操作失败");
         return picture;
+    }
+
+    @Override
+    public List<PictureVO> searchPictureByColor(Long spaceId, String picColor, User loginUser) {
+        //1.校验参数
+        ThrowUtils.throwIF(spaceId == null, ErrorCode.PARAMS_ERROR, "空间id不能为空");
+        ThrowUtils.throwIF(picColor == null, ErrorCode.PARAMS_ERROR, "颜色不能为空");
+        ThrowUtils.throwIF(loginUser == null, ErrorCode.NO_AUTH_ERROR, "用户不能为空");
+        //2.校验空间权限
+        Space space = spaceService.getById(spaceId);
+        if (space == null) {
+            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "不存在该空间");
+        } else if (!space.getUserId().equals(loginUser.getId())) {
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "该用户没有这个空间的权限");
+        }
+        //3.查询该空间下的所有图片
+        List<Picture> pictureList = this.lambdaQuery()
+                .eq(Picture::getSpaceId, spaceId)  //1.查询的图片必须为该空间下的
+                .isNotNull(Picture::getPicColor)    //2.查询的picture不为空
+                .list();
+        //如果没有图片直接返回空列表
+        if (ObjUtil.isNull(pictureList)) {
+            return new ArrayList<>();
+        }
+        //有图片的话。将颜色字符串转换为主色调
+        Color targetColor = Color.decode(picColor);
+        //4.计算相似度并排序
+        List<Picture> sortPictureList = pictureList.stream()
+                //默认是升序排序
+                .sorted(Comparator.comparing(picture -> {
+                    String hexColor = picture.getPicColor();
+                    //没有主色调的图片默认排序到最后
+                    if (StrUtil.isBlank(hexColor)) {
+                        return Double.MAX_VALUE;
+                    }
+                    //转换为color对象
+                    Color pictureColor = Color.decode(hexColor);
+                    //计算相似度
+                    //因为方法返回的是1-相似度，而我们设置没有主色调数值最大，而流的排序是升序(从小-》大)，
+                    //那么越小的值，相似度越大，给方法返回的添加负号，刚好符合逻辑
+                    //比如返回的是(a0.9与b0.8),不添加负号时候, a排在b后面，反之，a才排在b前面，这样才对
+                    return -ColorSimilarUtils.calculateSimilarity(pictureColor, targetColor);
+                }))
+                .limit(12)
+                .collect(Collectors.toList());
+        //5.返回结果
+        return sortPictureList.stream()
+                .map(PictureVO::objToVo)
+                .collect(Collectors.toList());
     }
 
     //实现异步

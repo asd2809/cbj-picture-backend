@@ -6,6 +6,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.yupi.cbjpicturebackend.annotation.AuthCheck;
+import com.yupi.cbjpicturebackend.api.imagesearch.model.ImageSearchResult;
 import com.yupi.cbjpicturebackend.common.BaseResponse;
 import com.yupi.cbjpicturebackend.common.DeleteRequest;
 import com.yupi.cbjpicturebackend.common.ResultUtils;
@@ -304,7 +305,7 @@ public class PictureController {
     @PostMapping("/edit")
     public BaseResponse<Picture> editPicture(PictureEditRequest pictureEditRequest,HttpServletRequest request){
         //判断请求是否为空
-        ThrowUtils.throwIF(pictureEditRequest == null || pictureEditRequest.getId() <= 0,ErrorCode.PARAMS_ERROR,"web传入的参数错误");
+        ThrowUtils.throwIF(pictureEditRequest == null, ErrorCode.PARAMS_ERROR, "web传入的参数错误");
         User loginUser = userService.getLoginUser(request);
         Picture picture = pictureService.editPicture(pictureEditRequest,loginUser);
         return ResultUtils.success(picture);
@@ -351,4 +352,31 @@ public class PictureController {
         return ResultUtils.success(uploadCount);
     }
 
+    /**
+     * 以图搜图
+     *
+     * @param searcbPictureByColorRequest
+     * @param request
+     * @return
+     */
+//    @PostMapping("/search/picture")
+//    public BaseResponse<List<ImageSearchResult>> searchPictureByPicture(@RequestBody SearchPictureByPictureRequest searchPictureByPictureRequest){
+//        ThrowUtils.throwIF(searchPictureByPictureRequest == null, ErrorCode.PARAMS_ERROR);
+//        Long pictureId = searchPictureByPictureRequest.getPictureId();
+//        ThrowUtils.throwIF(pictureId == null || pictureId <= 0, ErrorCode.PARAMS_ERROR);
+//        Picture oldPicture = pictureService.getById(pictureId);
+//        ThrowUtils.throwIF(oldPicture == null, ErrorCode.NOT_FOUND_ERROR);
+//        List<ImageSearchResult> resultList = ImageSearchApiFacade.searchImage(oldPicture.getUrl());
+//        return ResultUtils.success(resultList);
+//    }
+    @PostMapping("/search/color")
+    public BaseResponse<List<PictureVO>> searchPictureByColor(@RequestBody SearcbPictureByColorRequest searcbPictureByColorRequest,
+                                                              HttpServletRequest request) {
+        ThrowUtils.throwIF(searcbPictureByColorRequest == null, ErrorCode.PARAMS_ERROR, "请求为空");
+        User loginUser = userService.getLoginUser(request);
+        String picColor = searcbPictureByColorRequest.getPicColor();
+        Long spaceId = searcbPictureByColorRequest.getSpaceId();
+        List<PictureVO> pictureVOList= pictureService.searchPictureByColor(spaceId, picColor, loginUser);
+        return ResultUtils.success(pictureVOList);
+    }
 }

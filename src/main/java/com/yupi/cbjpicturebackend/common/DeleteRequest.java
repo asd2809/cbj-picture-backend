@@ -8,7 +8,7 @@ public class DeleteRequest {
     /**
      * id
      */
-    private long id;
+    private Long id;
 
     private static final long serialVersionUID = 1L;
 }
