@@ -14,31 +14,26 @@ import com.yupi.cbjpicturebackend.exception.BusinessException;
 import com.yupi.cbjpicturebackend.exception.ErrorCode;
 import com.yupi.cbjpicturebackend.exception.ThrowUtils;
 import com.yupi.cbjpicturebackend.model.dto.picture.*;
-import com.yupi.cbjpicturebackend.model.dto.space.SpaceAddRequest;
 import com.yupi.cbjpicturebackend.model.entity.Picture;
 import com.yupi.cbjpicturebackend.model.entity.Space;
 import com.yupi.cbjpicturebackend.model.entity.User;
 import com.yupi.cbjpicturebackend.model.enums.PictureReviewStatusEnum;
 import com.yupi.cbjpicturebackend.model.vo.PictureTagCategory;
 import com.yupi.cbjpicturebackend.model.vo.PictureVO;
-import com.yupi.cbjpicturebackend.model.vo.SpaceVO;
 import com.yupi.cbjpicturebackend.service.PictureService;
 import com.yupi.cbjpicturebackend.service.SpaceService;
 import com.yupi.cbjpicturebackend.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.beans.BeanUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.time.Duration;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -64,7 +59,7 @@ public class PictureController {
     private final Cache<String, String> LOCAL_CACHE =Caffeine.newBuilder()
                                     .initialCapacity(1024)
                                     .maximumSize(10000L)
-         // 缓存 5 分钟移除
+                                    // 缓存 5 分钟移除
                                     .expireAfterWrite(Duration.ofMillis(5))
                                     .build();
 
