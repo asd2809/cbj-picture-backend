@@ -147,7 +147,7 @@ public class UserController {
      */
     @PostMapping("/list/page/vo")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
-    public BaseResponse<Page<UserVO>> listUserVOByPage(@RequestBody UserQueryRequest userQueryRequest) {
+    public BaseResponse<Page<User>> listUserVOByPage(@RequestBody UserQueryRequest userQueryRequest) {
         ThrowUtils.throwIF(userQueryRequest == null, ErrorCode.PARAMS_ERROR);
         long current = userQueryRequest.getCurrent();
         long pageSize = userQueryRequest.getPageSize();
@@ -155,13 +155,6 @@ public class UserController {
 //        第二个参数的查询的条件,之前已经在userService写好了
         Page<User> userPage = userService.page(new Page<>(current, pageSize),
                 userService.getQueryWrapper(userQueryRequest));
-//        转化为我们需要的脱敏类的列表
-        Page<UserVO> userVOPage =new Page<>(current,pageSize,userPage.getTotal());
-//        写好的列表用户转化为脱敏的列表用户
-//        getRecords()方法是Page内置的一个转换为list的方法
-        List<UserVO> userVOList = userService.getUserVOList(userPage.getRecords());
-//        setRecords这个方法是把List<T>转换为Page<T>
-        userVOPage.setRecords(userVOList);
-        return ResultUtils.success(userVOPage);
+        return ResultUtils.success(userPage);
     }
 }
