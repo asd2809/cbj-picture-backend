@@ -54,26 +54,7 @@ public class SpaceVO implements Serializable {
      */
     private Long userId;
 
-    /**
-     * 创建时间
-     */
-    private Date creatTime;
 
-    /**
-     * 编辑时间
-     */
-    private Date editTime;
-
-    /**
-     * 更新时间
-     */
-    private Date updateTime;
-
-    /**
-     * 是否删除
-     */
-    @TableLogic
-    private Integer isDelete;
 
     /**
      * 创建用户
