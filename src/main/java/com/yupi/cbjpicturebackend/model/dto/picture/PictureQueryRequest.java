@@ -14,7 +14,7 @@ public class PictureQueryRequest extends PageRequest implements Serializable {
     /**
      * id
      */
-    private long id;
+    private Long id;
     /**
      * 图片名称
      */

@@ -222,7 +222,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         if (pictureQueryRequest == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "请求参数为空");
         }
-        long id = pictureQueryRequest.getId();
+        Long id = pictureQueryRequest.getId();
         String name = pictureQueryRequest.getName();
         String introduction = pictureQueryRequest.getIntroduction();
         String category = pictureQueryRequest.getCategory();
