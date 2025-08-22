@@ -7,9 +7,11 @@ import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.yupi.cbjpicturebackend.common.BaseResponse;
+import com.yupi.cbjpicturebackend.api.aliyunai.AliYunAiApi;
+import com.yupi.cbjpicturebackend.api.aliyunai.model.CreateOutPaintingTaskRequest;
+import com.yupi.cbjpicturebackend.api.aliyunai.model.CreateOutPaintingTaskResponse;
+import com.yupi.cbjpicturebackend.api.aliyunai.model.GetOutPaintingTaskResponse;
 import com.yupi.cbjpicturebackend.common.DeleteRequest;
-import com.yupi.cbjpicturebackend.common.ResultUtils;
 import com.yupi.cbjpicturebackend.exception.BusinessException;
 import com.yupi.cbjpicturebackend.exception.ErrorCode;
 import com.yupi.cbjpicturebackend.exception.ThrowUtils;
@@ -71,6 +73,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
     private TransactionTemplate transactionTemplate;
     @Autowired
     private CosManager cosManager;
+    @Autowired
+    private AliYunAiApi aliYunAiApi;
 
 
     /**
@@ -568,7 +572,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         //数据校验
         this.validPicture(picture);
         //判断是否存在
-        long id = pictureEditRequest.getId();
+        Long id = pictureEditRequest.getId();
         //查询数据库
         Picture oldPicture = this.getById(id);
 
@@ -628,6 +632,109 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         return sortPictureList.stream()
                 .map(PictureVO::objToVo)
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public void editPitureByBatch(PictureEditByBatchRequest pictureEditByBatchRequest, User loginUser) {
+        //1.获取和校验参数
+        List<Long> pictureIdList = pictureEditByBatchRequest.getPictureIdList();
+        String spaceId = pictureEditByBatchRequest.getSpaceId();
+        String category = pictureEditByBatchRequest.getCategory();
+        List<String> tags = pictureEditByBatchRequest.getTags();
+        ThrowUtils.throwIF(loginUser == null, ErrorCode.NO_AUTH_ERROR);
+        ThrowUtils.throwIF(spaceId == null, ErrorCode.PARAMS_ERROR);
+        ThrowUtils.throwIF(CollUtil.isEmpty(pictureIdList), ErrorCode.PARAMS_ERROR);
+        //2.校验空间权限
+        Space space = spaceService.getById(spaceId);
+        ThrowUtils.throwIF(space == null, ErrorCode.PARAMS_ERROR, "空间不存在");
+        if (!space.getUserId().equals(loginUser.getId())) {
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "该用户没有权限操作此空间");
+        }
+        //3.查询指定图片(仅选择需要的字段)
+        List<Picture> pictureList = this.lambdaQuery()
+                .select(Picture::getId, Picture::getSpaceId)
+                .eq(Picture::getSpaceId, spaceId)
+                .in(Picture::getId, pictureIdList)
+                .list();
+        if (ObjUtil.isNull(pictureList)) {
+            return;
+        }
+        //4。更新分类和标签
+        pictureList.forEach(picture -> {
+            if (ObjUtil.isNull(category)) {
+                picture.setCategory(category);
+            }
+            if (ObjUtil.isNull(tags)) {
+                picture.setTags(JSONUtil.toJsonStr(tags));
+            }
+        });
+        // 批量重命名
+        String nameRule = pictureEditByBatchRequest.getNameRule();
+        fillPictureWithNameRule(pictureList, nameRule);
+        //5.操作数据库进行查询
+        boolean result = this.updateBatchById(pictureList);
+        ThrowUtils.throwIF(!result, ErrorCode.NOT_FOUND_ERROR, "批量编辑失败");
+    }
+
+    /**
+     * alk扩图
+     * @param createPictureOutPaintingTaskRequest
+     * @param loginUser
+     * @return
+     */
+    @Override
+    public CreateOutPaintingTaskResponse createPictureOutPaintingTask(CreatePictureOutPaintingTaskRequest createPictureOutPaintingTaskRequest, User loginUser) {
+        //获取图片信息
+        Long pictureId = createPictureOutPaintingTaskRequest.getPictureId();
+        //新的检查为空的方法
+        Picture picture = Optional.ofNullable(this.getById(pictureId))
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND_ERROR, "<UNK>"));
+        //检验授权
+        checkPictureAuth(loginUser, picture);
+        //创建扩图任务
+        CreateOutPaintingTaskRequest createOutPaintingTaskRequest = new CreateOutPaintingTaskRequest();
+        CreateOutPaintingTaskRequest.Input input = new CreateOutPaintingTaskRequest.Input();
+        /**
+         *在picture存放的地址url不是完整的地址，所以从接口文档进行查询会报错
+         */
+        input.setImageUrl("https://cbj-1352475166.cos.ap-nanjing.myqcloud.com/" +  picture.getUrl());
+//        input.setImageUrl("https://www.gstatic.com/webp/gallery/1.jpg");
+        createOutPaintingTaskRequest.setInput(input);
+        createOutPaintingTaskRequest.setParameters(createPictureOutPaintingTaskRequest.getParameters());
+        //调用任务
+        return aliYunAiApi.createOutPaintingTask(createOutPaintingTaskRequest);
+    }
+
+    /**
+     * 查询ai扩图的结果
+     * @param taskId
+     * @return
+     */
+    @Override
+    public GetOutPaintingTaskResponse getPicturePaintingTask(String taskId) {
+        return aliYunAiApi.getOutPaintingTask(taskId);
+    }
+
+    /**
+     * nameRule  格式：图片{序号}
+     *
+     * @param pictureList
+     * @param nameRule
+     */
+    public void fillPictureWithNameRule(List<Picture> pictureList, String nameRule) {
+        if (StrUtil.isBlank(nameRule) || StrUtil.isBlank(nameRule)) {
+            return;
+        }
+        long count = 1;
+        try {
+            for (Picture picture : pictureList) {
+                String picName = nameRule.replaceAll("\\{序号}", String.valueOf(count++));
+                picture.setName(picName);
+            }
+        } catch (Exception e) {
+            log.error("名称解析异常", e);
+            throw new BusinessException(ErrorCode.OPERATION_ERROR, "名称解析异常");
+        }
     }
 
     //实现异步

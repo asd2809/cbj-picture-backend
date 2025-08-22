@@ -2,7 +2,8 @@ package com.yupi.cbjpicturebackend.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.yupi.cbjpicturebackend.common.BaseResponse;
+import com.yupi.cbjpicturebackend.api.aliyunai.model.CreateOutPaintingTaskResponse;
+import com.yupi.cbjpicturebackend.api.aliyunai.model.GetOutPaintingTaskResponse;
 import com.yupi.cbjpicturebackend.common.DeleteRequest;
 import com.yupi.cbjpicturebackend.model.dto.picture.*;
 import com.yupi.cbjpicturebackend.model.entity.Picture;
@@ -140,4 +141,28 @@ public interface PictureService extends IService<Picture> {
      */
     List<PictureVO> searchPictureByColor(Long spaceId, String picColor, User loginUser);
 
+    /**
+     * 批量修改图片
+     *
+     * @param pictureEditByBatchRequest
+     * @param loginUser
+     */
+    void editPitureByBatch(PictureEditByBatchRequest pictureEditByBatchRequest, User loginUser);
+
+    /**
+     * AI扩图
+     *
+     * @param createPictureOutPaintingTaskRequest
+     * @param loginUser
+     */
+
+    CreateOutPaintingTaskResponse createPictureOutPaintingTask(CreatePictureOutPaintingTaskRequest createPictureOutPaintingTaskRequest, User loginUser);
+
+
+    /**
+     * 查询ai扩图任务
+     * @param taskId
+     * @return
+     */
+    GetOutPaintingTaskResponse getPicturePaintingTask(String taskId);
 }
