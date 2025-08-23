@@ -74,9 +74,7 @@ public class SpaceController {
         Space space = spaceService.getById(id);
         ThrowUtils.throwIF(space == null,ErrorCode.PARAMS_ERROR);
         //仅本人或管理员可以删除
-        if(!space.getUserId().equals(loginUser.getId()) && !userService.isAdmin(loginUser) ){
-            ThrowUtils.throwIF(true,ErrorCode.NO_AUTH_ERROR);
-        }
+        spaceService.checkSpaceAuth(loginUser, space);
 //        if(!userService.isAdmin(loginUser) ||!space.getUserId().equals(loginUser.getId()) ){
 //            ThrowUtils.throwIF(true,ErrorCode.PARAMS_ERROR);
 //        }
@@ -214,9 +212,7 @@ public class SpaceController {
             long id = spaceEditRequest.getId();
         Space oldSpace = spaceService.getById(id);
 //      仅本人或管理员可以编辑
-        if(!oldSpace.getUserId().equals(loginUser.getId()) || !UserConstant.ADMIN_ROLE.equals(loginUser.getUserRole())){
-            ThrowUtils.throwIF(true,ErrorCode.NO_AUTH_ERROR,"编辑空间既不是本人也不是管理员");
-        }
+        spaceService.checkSpaceAuth(loginUser, oldSpace);
 
         boolean result = spaceService.updateById(space);
         ThrowUtils.throwIF(!result,ErrorCode.SYSTEM_ERROR,"数据库操作失败");
