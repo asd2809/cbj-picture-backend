@@ -38,6 +38,7 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
     private UserService userService;
 
 
+
     /**
      * 与事务有关
      *
@@ -242,6 +243,13 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
                 return space.getId();
             });
             return newSpaceId;
+        }
+    }
+
+    @Override
+    public void checkSpaceAuth(User loginUser, Space space) {
+        if (!space.getUserId().equals(loginUser.getId()) || !userService.isAdmin(loginUser)) {
+            throw new BusinessException(ErrorCode.NO_AUTH_ERROR, "没有该空间的权限");
         }
     }
 }

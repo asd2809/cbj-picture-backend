@@ -686,9 +686,9 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
     public CreateOutPaintingTaskResponse createPictureOutPaintingTask(CreatePictureOutPaintingTaskRequest createPictureOutPaintingTaskRequest, User loginUser) {
         //获取图片信息
         Long pictureId = createPictureOutPaintingTaskRequest.getPictureId();
-        //新的检查为空的方法
-        Picture picture = Optional.ofNullable(this.getById(pictureId))
-                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND_ERROR, "<UNK>"));
+
+        Picture picture = this.getById(pictureId);
+        ThrowUtils.throwIF(picture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
         //检验授权
         checkPictureAuth(loginUser, picture);
         //创建扩图任务
