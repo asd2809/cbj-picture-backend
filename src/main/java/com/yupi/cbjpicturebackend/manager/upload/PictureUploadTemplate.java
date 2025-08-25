@@ -102,6 +102,7 @@ public abstract class PictureUploadTemplate {
      * @return
      */
     private UploadPictureResult buildResult(String originalFilename, CIObject compressedCiObject, CIObject thumbnailCiObject, ImageInfo imageInfo) {
+        //String bucketName = cosClientConfig.getBucket() + "." + cosClientConfig.getHost() + "/";
         //            计算宽高比
         int picWidth = compressedCiObject.getWidth();
         int picHeight = compressedCiObject.getHeight();

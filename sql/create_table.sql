@@ -88,8 +88,29 @@ create table if not exists space
 ALTER TABLE picture
     ADD COLUMN spaceId bigint null comment '空间id (为空表示公共空间)';
 -- 创建索引
-CREATE INDEX idx_spaceId ON picture (spaceId)
+CREATE INDEX idx_spaceId ON picture (spaceId);
 
 -- 添加新列
 ALTER TABLE picture
     ADD COLUMN picColor varchar(16) null comment '图片主色调';
+
+-- 添加新列
+ALTER TABLE space
+    ADD COLUMN spaceType int default 0 not null comment '空间类型：0-私有 1-团队';
+
+CREATE INDEX idx_spaceType ON space (spaceType);
+
+-- 空间成员表
+create table if not exists space_user
+(
+    id         bigint auto_increment comment 'id' primary key,
+    spaceId    bigint                                 not null comment '空间id',
+    userId     bigint                                 not null comment '用户id',
+    spaceRole  varchar(128) default 'viewer'          not null comment '空间角色：viewer/editor/admin',
+    createTime dateTime     default CURRENT_TIMESTAMP not null comment '创建时间',
+    updateTime dateTime     default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
+    -- 索引设计 spaceId与userId的重合不能重复
+    UNIQUE KEY uk_spaceId_userId (spaceId, userId), -- 唯一索引，用户在一个空间只能有一个角色
+    INDEX idx_spaceId (spaceId),
+    INDEX idx_userId (userId)
+)

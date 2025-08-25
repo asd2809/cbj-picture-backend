@@ -11,11 +11,15 @@ import com.yupi.cbjpicturebackend.exception.ThrowUtils;
 import com.yupi.cbjpicturebackend.model.dto.space.SpaceAddRequest;
 import com.yupi.cbjpicturebackend.model.dto.space.SpaceQueryRequest;
 import com.yupi.cbjpicturebackend.model.entity.Space;
+import com.yupi.cbjpicturebackend.model.entity.SpaceUser;
 import com.yupi.cbjpicturebackend.model.entity.User;
 import com.yupi.cbjpicturebackend.model.enums.SpaceLevelEnum;
+import com.yupi.cbjpicturebackend.model.enums.SpaceRoleEnum;
+import com.yupi.cbjpicturebackend.model.enums.SpaceTypeEnum;
 import com.yupi.cbjpicturebackend.model.vo.SpaceVO;
 import com.yupi.cbjpicturebackend.model.vo.UserVO;
 import com.yupi.cbjpicturebackend.service.SpaceService;
+import com.yupi.cbjpicturebackend.service.SpaceUserService;
 import com.yupi.cbjpicturebackend.service.UserService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
@@ -38,7 +42,8 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
     private UserService userService;
 
 
-
+    @Resource
+    private SpaceUserService spaceUserService;
     /**
      * 与事务有关
      *
@@ -46,16 +51,14 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
     @Resource
     private TransactionTemplate transactionTemplate;
 
-    public SpaceServiceImpl(UserService userService) {
-        this.userService = userService;
-    }
-
     @Override
     public void validSpace(Space space, boolean add) {
         ThrowUtils.throwIF(space == null, ErrorCode.PARAMS_ERROR, "参数不能为空");
         //查询id判断id是否为空
         String spaceName = space.getSpaceName();
         Integer spaceLevel = space.getSpaceLevel();
+        Integer spaceType = space.getSpaceType();
+        SpaceTypeEnum spaceTypeEnum = SpaceTypeEnum.getSpaceTypeEnum(spaceType);
         SpaceLevelEnum spaceLevelEnum = SpaceLevelEnum.getSpaceLevelEnum(spaceLevel);
         //如果是创建空间
         if (add) {
@@ -64,6 +67,9 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
             }
             if (spaceLevelEnum == null) {
                 throw new BusinessException(ErrorCode.PARAMS_ERROR, "不存在这个空间级别");
+            }
+            if (ObjectUtil.isEmpty(spaceType)) {
+                throw new BusinessException(ErrorCode.PARAMS_ERROR, "不确定空间类型");
             }
             return;
         }
@@ -77,6 +83,9 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
         }
         if (spaceLevelEnum == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "不存在这个空间级别");
+        }
+        if (spaceType != null && spaceTypeEnum == null) {
+            throw new BusinessException(ErrorCode.PARAMS_ERROR, "空间类别不存在");
         }
     }
 
@@ -93,7 +102,7 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
     }
 
     @Override
-    public SpaceVO getSpaceVO(Space Space, HttpServletRequest request) {
+    public SpaceVO getSpaceVO(Space Space) {
         ThrowUtils.throwIF(Space == null, ErrorCode.PARAMS_ERROR, "传入的空间参数为空");
         SpaceVO spaceVO = SpaceVO.objToVo(Space);
         //关联查询user
@@ -164,15 +173,15 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
         Long userId = spaceQueryRequest.getUserId();
         String sortField = spaceQueryRequest.getSortField();
         String sortOrder = spaceQueryRequest.getSortOrder();
-
+        Integer spaceType = spaceQueryRequest.getSpaceType();
         QueryWrapper<Space> queryWrapper = new QueryWrapper<>();
 
         queryWrapper.eq(ObjectUtil.isNotEmpty(id), "id", id);
         queryWrapper.eq(ObjectUtil.isNotEmpty(spaceLevel), "spaceLevel", spaceLevel);
         queryWrapper.eq(ObjectUtil.isNotEmpty(userId), "userId", userId);
+        queryWrapper.eq(ObjectUtil.isNotEmpty(spaceType), "spaceType", spaceType);
         queryWrapper.like(ObjectUtil.isNotEmpty(spaceName), "spaceName", spaceName);
         queryWrapper.orderBy(StrUtil.isNotEmpty(sortField), "asecend".equals(sortOrder), sortField);
-
         return queryWrapper;
     }
 
@@ -207,6 +216,15 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
     public long addSpace(SpaceAddRequest spaceAddRequest, User loginUser) {
         //1.填充参数默认值
         Space space = new Space();
+        if (StrUtil.isBlank(spaceAddRequest.getSpaceName())) {
+            space.setSpaceName("默认空间");
+        }
+        if (spaceAddRequest.getSpaceLevel() == null) {
+            space.setSpaceLevel(SpaceLevelEnum.COMMON.getValue());
+        }
+        if (space.getSpaceType() == null) {
+            space.setSpaceType(SpaceTypeEnum.PRIVATE.getValue());
+        }
         //注意可能前端会传空
         BeanUtils.copyProperties(spaceAddRequest, space);
         //填充容量和大小
@@ -231,7 +249,10 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
              */
             Long newSpaceId = transactionTemplate.execute(status ->  {
                 //判断是否已有空间
-                boolean exists = this.lambdaQuery().eq(Space::getUserId, userId).exists();
+                boolean exists = this.lambdaQuery()
+                        .eq(Space::getUserId, userId)
+                        .eq(Space::getSpaceType, space.getSpaceType())
+                        .exists();
                 if (exists) {
                     throw new BusinessException(ErrorCode.PARAMS_ERROR, "每个用户只能创建一个私有空间");
                 }
@@ -239,6 +260,16 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
                 boolean result = this.save(space);
                 //创建私有空间
                 ThrowUtils.throwIF(!result, ErrorCode.PARAMS_ERROR, "保存空间到数据库失败");
+                if (space.getSpaceType() == SpaceTypeEnum.PRIVATE.getValue()) {
+                    //创建成员记录(给创建人设置)
+                    SpaceUser spaceUser = new SpaceUser();
+                    spaceUser.setSpaceId(space.getId());
+                    spaceUser.setUserId(userId);
+                    spaceUser.setSpaceRole(SpaceRoleEnum.ADMIN.getValue());
+                    result = spaceUserService.save(spaceUser);
+                    ThrowUtils.throwIF(!result, ErrorCode.PARAMS_ERROR, "创建空间创建者失败");
+
+                }
                 //返回新写入的数据id
                 return space.getId();
             });
