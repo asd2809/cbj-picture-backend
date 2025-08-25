@@ -31,7 +31,7 @@ public enum SpaceTypeEnum {
      * @param value 枚举值得=的vakue
      * @return 枚举值
      */
-    public static SpaceTypeEnum getSpaceTypeEnum(int value) {
+    public static SpaceTypeEnum getEnumByValue(int value) {
         if (ObjUtil.isEmpty(value)) {
             return null;
         }

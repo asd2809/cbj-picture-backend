@@ -58,7 +58,7 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
         String spaceName = space.getSpaceName();
         Integer spaceLevel = space.getSpaceLevel();
         Integer spaceType = space.getSpaceType();
-        SpaceTypeEnum spaceTypeEnum = SpaceTypeEnum.getSpaceTypeEnum(spaceType);
+        SpaceTypeEnum spaceTypeEnum = SpaceTypeEnum.getEnumByValue(spaceType);
         SpaceLevelEnum spaceLevelEnum = SpaceLevelEnum.getSpaceLevelEnum(spaceLevel);
         //如果是创建空间
         if (add) {

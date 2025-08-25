@@ -375,8 +375,9 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         //2.判断数据库中的图片是否存在
         Picture picture = this.getById(id);
         ThrowUtils.throwIF(picture == null,ErrorCode.PARAMS_ERROR,"查询数据库失败");
+        ///  改为使用Sa-Token（注解鉴权）
         //空间与公共图库的权限管理
-        checkPictureAuth(loginUser,picture);
+        //checkPictureAuth(loginUser,picture);
 //        if(!userService.isAdmin(loginUser) ||!picture.getUserId().equals(loginUser.getId()) ){
 //            ThrowUtils.throwIF(true,ErrorCode.PARAMS_ERROR);
 //        }
@@ -575,9 +576,9 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         Long id = pictureEditRequest.getId();
         //查询数据库
         Picture oldPicture = this.getById(id);
-
+        ///  改为使用Sa-Token（注解鉴权）
         //仅本人或管理员可以编辑
-        this.checkPictureAuth(loginUser,oldPicture);
+        //this.checkPictureAuth(loginUser,oldPicture);
         //补充过审
         this.fillReviewParams(picture, loginUser);
         boolean result = this.updateById(picture);
@@ -689,8 +690,9 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 
         Picture picture = this.getById(pictureId);
         ThrowUtils.throwIF(picture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
+        ///  改为使用Sa-Token（注解鉴权）
         //检验授权
-        checkPictureAuth(loginUser, picture);
+        //checkPictureAuth(loginUser, picture);
         //创建扩图任务
         CreateOutPaintingTaskRequest createOutPaintingTaskRequest = new CreateOutPaintingTaskRequest();
         CreateOutPaintingTaskRequest.Input input = new CreateOutPaintingTaskRequest.Input();
