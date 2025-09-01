@@ -113,4 +113,7 @@ create table if not exists space_user
     UNIQUE KEY uk_spaceId_userId (spaceId, userId), -- 唯一索引，用户在一个空间只能有一个角色
     INDEX idx_spaceId (spaceId),
     INDEX idx_userId (userId)
-)
+);
+
+ALTER TABLE space
+    ADD COLUMN spaceRole INT DEFAULT 0 COMMENT '空间角色';

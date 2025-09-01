@@ -11,6 +11,8 @@ import com.yupi.cbjpicturebackend.common.ResultUtils;
 import com.yupi.cbjpicturebackend.exception.BusinessException;
 import com.yupi.cbjpicturebackend.exception.ErrorCode;
 import com.yupi.cbjpicturebackend.exception.ThrowUtils;
+import com.yupi.cbjpicturebackend.manager.auth.annotation.SaSpaceCheckPermission;
+import com.yupi.cbjpicturebackend.manager.auth.model.SpaceUserPermissionConstant;
 import com.yupi.cbjpicturebackend.model.dto.space.SpaceEditRequest;
 import com.yupi.cbjpicturebackend.model.dto.space.SpaceQueryRequest;
 import com.yupi.cbjpicturebackend.model.dto.spaceuser.SpaceUserAddRequest;
@@ -50,6 +52,7 @@ public class SpaceUserController {
      * @return
      */
     @PostMapping("/add")
+    @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.SPACE_USER_MANAGE)
     public BaseResponse<Long> addSpaceUser(@RequestBody SpaceUserAddRequest spaceUserAddRequest,
                                            HttpServletRequest request) {
         ThrowUtils.throwIF(spaceUserAddRequest == null, ErrorCode.PARAMS_ERROR);
@@ -57,21 +60,6 @@ public class SpaceUserController {
         Long result = spaceUserService.addSpaceUser(spaceUserAddRequest);
         return ResultUtils.success(result);
     }
-
-
-//    /**
-//     * 先
-//     * @param spaceUserQueryRequest
-//     * @param request
-//     * @return
-//     */
-//    @GetMapping("/select")
-//    public BaseResponse<List<SpaceUserVo>> selectSpaceUser(@RequestParam SpaceUserQueryRequest spaceUserQueryRequest,
-//                                                           HttpServletRequest request) {
-//
-//        spaceUserService.list();
-//    }
-
     /**
      * 删除团队空间
      *
@@ -80,6 +68,7 @@ public class SpaceUserController {
      * @return
      */
     @PostMapping("/delete")
+    @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.SPACE_USER_MANAGE)
     public BaseResponse<Boolean> deleteSpaceUser(@RequestBody DeleteRequest deleteRequest, HttpServletRequest request) {
         ThrowUtils.throwIF(deleteRequest == null, ErrorCode.PARAMS_ERROR);
         Long id = deleteRequest.getId();
@@ -99,6 +88,7 @@ public class SpaceUserController {
      * @return
      */
     @PostMapping("/get")
+    @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.SPACE_USER_MANAGE)
     public BaseResponse<SpaceUser> getSpaceUser(@RequestBody SpaceUserQueryRequest spaceUserQueryRequest) {
         //参数校验
         ThrowUtils.throwIF(spaceUserQueryRequest == null, ErrorCode.PARAMS_ERROR);
@@ -118,7 +108,9 @@ public class SpaceUserController {
      * @param spaceUserQueryRequest
      * @return
      */
-    public BaseResponse<List<SpaceUserVo>> getSpaceUserVo(@RequestBody SpaceUserQueryRequest spaceUserQueryRequest) {
+    @PostMapping("/list")
+    @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.SPACE_USER_MANAGE)
+    public BaseResponse<List<SpaceUserVo>> listSpaceUserVo(@RequestBody SpaceUserQueryRequest spaceUserQueryRequest) {
         ThrowUtils.throwIF(spaceUserQueryRequest == null, ErrorCode.PARAMS_ERROR);
         //获取条件构造器
         QueryWrapper<SpaceUser> queryWrapper = spaceUserService.getQueryWrapper(spaceUserQueryRequest);
@@ -136,6 +128,7 @@ public class SpaceUserController {
      * @return
      */
     @PostMapping("/edit")
+    @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.SPACE_USER_MANAGE)
     public BaseResponse<SpaceUser> editSpaceUser(SpaceUserEditRequest spaceUserEditRequest, HttpServletRequest request) {
         if (spaceUserEditRequest == null || spaceUserEditRequest.getSpaceUserId() <= 0) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);

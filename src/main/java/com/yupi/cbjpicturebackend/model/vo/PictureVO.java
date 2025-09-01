@@ -7,6 +7,7 @@ import com.yupi.cbjpicturebackend.model.entity.Picture;
 import lombok.Data;
 import org.springframework.beans.BeanUtils;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
@@ -95,6 +96,10 @@ public class PictureVO {
      */
     private Date updateTime;
 
+    /**
+     * 添加权限列表
+     */
+    private List<String> permissions = new ArrayList<>();
     /**
      *空间id
      */
