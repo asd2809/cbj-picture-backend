@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.yupi.cbjpicturebackend.exception.BusinessException;
 import com.yupi.cbjpicturebackend.exception.ErrorCode;
 import com.yupi.cbjpicturebackend.exception.ThrowUtils;
+import com.yupi.cbjpicturebackend.manager.sharding.DynamicShardingManager;
 import com.yupi.cbjpicturebackend.model.dto.space.SpaceAddRequest;
 import com.yupi.cbjpicturebackend.model.dto.space.SpaceQueryRequest;
 import com.yupi.cbjpicturebackend.model.entity.Space;
@@ -22,6 +23,8 @@ import com.yupi.cbjpicturebackend.service.SpaceService;
 import com.yupi.cbjpicturebackend.service.SpaceUserService;
 import com.yupi.cbjpicturebackend.service.UserService;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 import javax.annotation.Resource;
@@ -50,6 +53,10 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
      */
     @Resource
     private TransactionTemplate transactionTemplate;
+
+//    @Resource
+//    @Lazy
+//    private DynamicShardingManager dynamicShardingManager;
 
     @Override
     public void validSpace(Space space, boolean add) {
@@ -88,6 +95,7 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "空间类别不存在");
         }
     }
+
 
     @Override
     public List<SpaceVO> getSpaceVOList(List<Space> spaceList) {
@@ -270,6 +278,9 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
                     ThrowUtils.throwIF(!result, ErrorCode.PARAMS_ERROR, "创建空间创建者失败");
 
                 }
+//                /// 仅对团队空间生效
+//                // 创建分表
+//                dynamicShardingManager.createSpacePictureTable(space);
                 //返回新写入的数据id
                 return space.getId();
             });
