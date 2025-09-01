@@ -17,6 +17,7 @@ import com.yupi.cbjpicturebackend.constant.UserConstant;
 import com.yupi.cbjpicturebackend.exception.BusinessException;
 import com.yupi.cbjpicturebackend.exception.ErrorCode;
 import com.yupi.cbjpicturebackend.exception.ThrowUtils;
+import com.yupi.cbjpicturebackend.manager.auth.SpaceUserAuthManager;
 import com.yupi.cbjpicturebackend.manager.auth.StpKit;
 import com.yupi.cbjpicturebackend.manager.auth.annotation.SaSpaceCheckPermission;
 import com.yupi.cbjpicturebackend.manager.auth.model.SpaceUserPermission;
@@ -34,6 +35,7 @@ import com.yupi.cbjpicturebackend.service.UserService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.web.bind.annotation.*;
@@ -72,6 +74,9 @@ public class PictureController {
                                     // 缓存 5 分钟移除
                                     .expireAfterWrite(Duration.ofMillis(5))
                                     .build();
+    @Autowired
+    private SpaceUserAuthManager spaceUserAuthManager;
+
     /**
      * 上传图片
      */
@@ -204,8 +209,7 @@ public class PictureController {
         //       操作数据库
         Page<Picture> picturePage = pictureService.page(new Page<>(current, pageSize),
                 pictureService.getQueryWrapper(pictureQueryRequest));
-        List<Picture> pictureList = picturePage.getRecords();
-//        ThrowUtils.throwIF(picturePage.getRecords().isEmpty(),ErrorCode.SYSTEM_ERROR,"数据库操作失败");
+
         return ResultUtils.success(pictureService.getPictureVOPage(picturePage,request));
     }
     /**
@@ -291,7 +295,6 @@ public class PictureController {
      * @return
      */
     @GetMapping("/get/vo")
-
     public BaseResponse<PictureVO> getPictureVOById(Long id,HttpServletRequest request){
         //1.判断请求是否为空
         ThrowUtils.throwIF(id==null,ErrorCode.PARAMS_ERROR,"传入图片的id为空");
@@ -301,6 +304,7 @@ public class PictureController {
         User loginUser = userService.getLoginUser(request);
         //先判断该图片是否有spaceId，即这个图片是不是某个用户的私有
         Long spaceId = picture.getSpaceId();
+        Space space = null;
         if (spaceId != null){
             /// 使用编程式注解
             boolean hasPermission = StpKit.SPACE.hasPermission(SpaceUserPermissionConstant.PICTURE_VIEW);
@@ -308,8 +312,14 @@ public class PictureController {
             //公共图库的图片是随便获取的,但是该图片存储的私有空间，可能不是该用户的
             ///  改为使用Sa-Token（注解鉴权）
 //            pictureService.checkPictureAuth(loginUser,picture);
+            space = spaceService.getById(spaceId);
+            ThrowUtils.throwIF(space==null,ErrorCode.NOT_FOUND_ERROR,"空间不存在");
         }
-        return ResultUtils.success(PictureVO.objToVo(picture));
+
+        List<String> permissionList = spaceUserAuthManager.getPermissionList(space, loginUser);
+        PictureVO pictureVO = pictureService.getPictureVO(picture,request);
+        pictureVO.setPermissions(permissionList);
+        return ResultUtils.success(pictureVO);
     }
 
     /**

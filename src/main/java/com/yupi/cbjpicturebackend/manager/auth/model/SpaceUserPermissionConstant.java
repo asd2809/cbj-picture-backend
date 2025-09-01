@@ -1,5 +1,9 @@
 package com.yupi.cbjpicturebackend.manager.auth.model;
 
+
+/**
+ * 设置常量，用户Sa-Token
+ */
 public interface SpaceUserPermissionConstant {
     /**
      * 空间用户管理权限

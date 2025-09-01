@@ -17,7 +17,7 @@
             <result property="editTime" column="editTime" />
             <result property="updateTime" column="updateTime" />
             <result property="isDelete" column="isDelete" />
-        <result property="spaceRole" column="spaceRole"/>
+            <result property="spaceRole" column="spaceRole"/>
     </resultMap>
 
     <sql id="Base_Column_List">

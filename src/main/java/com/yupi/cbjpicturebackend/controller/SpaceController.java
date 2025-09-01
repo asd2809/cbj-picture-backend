@@ -12,6 +12,7 @@ import com.yupi.cbjpicturebackend.common.ResultUtils;
 import com.yupi.cbjpicturebackend.constant.UserConstant;
 import com.yupi.cbjpicturebackend.exception.ErrorCode;
 import com.yupi.cbjpicturebackend.exception.ThrowUtils;
+import com.yupi.cbjpicturebackend.manager.auth.SpaceUserAuthManager;
 import com.yupi.cbjpicturebackend.model.dto.space.*;
 import com.yupi.cbjpicturebackend.model.entity.Space;
 import com.yupi.cbjpicturebackend.model.entity.User;
@@ -20,6 +21,7 @@ import com.yupi.cbjpicturebackend.model.vo.SpaceVO;
 import com.yupi.cbjpicturebackend.service.SpaceService;
 import com.yupi.cbjpicturebackend.service.UserService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
@@ -39,6 +41,8 @@ public class SpaceController {
 
     @Resource
     private UserService userService;
+    @Autowired
+    private SpaceUserAuthManager spaceUserAuthManager;
 
     /**
      * 创建空间
@@ -136,13 +140,17 @@ public class SpaceController {
      * @return
      */
     @GetMapping("/get/vo")
-    public BaseResponse<SpaceVO> getSpaceVOById(Long id){
+    public BaseResponse<SpaceVO> getSpaceVOById(Long id,HttpServletRequest request){
         //1.判断请求是否为空
         ThrowUtils.throwIF(id==null,ErrorCode.PARAMS_ERROR,"传入空间的id为空");
         //2.操作数据库
         Space space = spaceService.getById(id);
         ThrowUtils.throwIF(space==null,ErrorCode.SYSTEM_ERROR,"查不到这个空间");
-        return ResultUtils.success(SpaceVO.objToVo(space));
+        SpaceVO spaceVO = spaceService.getSpaceVO(space);
+        User loginUser = userService.getLoginUser(request);
+        List<String> permissionList = spaceUserAuthManager.getPermissionList(space, loginUser);
+        spaceVO.setPermissions(permissionList);
+        return ResultUtils.success(spaceVO);
     }
 
     /**

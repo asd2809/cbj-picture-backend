@@ -6,6 +6,9 @@ import lombok.Data;
 import java.io.Serializable;
 import java.util.List;
 
+/**
+ * 用于接收配置文件的值
+ */
 @Data
 public class SpaceUserAuthConfig implements Serializable {
     /**

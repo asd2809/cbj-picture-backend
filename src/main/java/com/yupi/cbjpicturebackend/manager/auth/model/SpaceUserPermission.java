@@ -8,7 +8,6 @@ import java.io.Serializable;
 public class SpaceUserPermission implements Serializable {
 
     /**
-     *
      * 权限键
      */
     private String key;

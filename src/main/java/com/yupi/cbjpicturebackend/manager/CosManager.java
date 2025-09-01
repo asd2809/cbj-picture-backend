@@ -82,8 +82,6 @@ public class CosManager {
             thumbnailRule.setBucket(cosClientConfig.getBucket());
             rule.add(thumbnailRule);
         }
-
-
         picOperations.setRules(rule);
         putObjectRequest.setPicOperations(picOperations);
 

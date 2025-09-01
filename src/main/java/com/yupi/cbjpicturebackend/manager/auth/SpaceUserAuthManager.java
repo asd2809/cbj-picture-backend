@@ -18,6 +18,9 @@ import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 空间权限管理
+ */
 @Component
 public class SpaceUserAuthManager {
 
@@ -29,6 +32,10 @@ public class SpaceUserAuthManager {
 
     public static final SpaceUserAuthConfig SPACE_USER_AUTH_CONFIG;
 
+    /**
+     * 静态模块，在类加载时就执行一次，
+     * 常用于初始化工作
+     */
     static {
         String json = ResourceUtil.readUtf8Str("biz/spaceUserAuthConfig.json");
         SPACE_USER_AUTH_CONFIG = JSONUtil.toBean(json, SpaceUserAuthConfig.class);

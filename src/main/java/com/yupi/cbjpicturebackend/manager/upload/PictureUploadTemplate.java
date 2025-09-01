@@ -107,6 +107,8 @@ public abstract class PictureUploadTemplate {
         int picWidth = compressedCiObject.getWidth();
         int picHeight = compressedCiObject.getHeight();
         double picScale = NumberUtil.round(picWidth * 1.0 / picWidth, 2).doubleValue();
+        String url  = "https://" +  cosClientConfig.getBucket() +"."+ cosClientConfig.getHost();
+
         //            封装返回结果
         UploadPictureResult uploadPictureResult = new UploadPictureResult();
         uploadPictureResult.setName(FileUtil.getSuffix(originalFilename));
@@ -118,10 +120,10 @@ public abstract class PictureUploadTemplate {
         //设置压缩后图片的地址
 //        uploadPictureResult.setUrl( cosClientConfig.getHost() + "/" + compressedCiObject.getKey());
         //在cos中删除只需桶名加上文件路径即可，不需要其他的比如cos的host，这是cos删除的规范
-        uploadPictureResult.setUrl(compressedCiObject.getKey());
+        uploadPictureResult.setUrl(url +"/"+ thumbnailCiObject.getKey());
         //设置缩略图地址
 //        uploadPictureResult.setThumbnailUrl(cosClientConfig.getHost() + "/" + thumbnailCiObject.getKey());
-        uploadPictureResult.setThumbnailUrl(thumbnailCiObject.getKey());
+        uploadPictureResult.setThumbnailUrl(url +"/"+ compressedCiObject.getKey());
         uploadPictureResult.setPicColor(imageInfo.getAve());
         //返回可访问的地址
         return uploadPictureResult;
@@ -142,10 +144,10 @@ public abstract class PictureUploadTemplate {
         int picWidth = imageInfo.getWidth();
         int picHeight = imageInfo.getHeight();
         double picScale = NumberUtil.round(picWidth * 1.0 / picWidth, 2).doubleValue();
-
+        String url  = "https://" +  cosClientConfig.getBucket() +"."+ cosClientConfig.getRegion() +"."+ cosClientConfig.getHost();
         //            封装返回结果
         UploadPictureResult uploadPictureResult = new UploadPictureResult();
-        uploadPictureResult.setUrl(cosClientConfig.getHost() + "/" + uploadPath);
+        uploadPictureResult.setUrl(url + "/" + uploadPath);
         uploadPictureResult.setName(FileUtil.getSuffix(originalFilename));
         uploadPictureResult.setPicSize(FileUtil.size(file));
         uploadPictureResult.setPicWidth(picWidth);
