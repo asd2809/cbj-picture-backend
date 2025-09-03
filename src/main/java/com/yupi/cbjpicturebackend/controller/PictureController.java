@@ -108,7 +108,7 @@ public class PictureController {
      */
     @PostMapping("/delete")
     @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.PICTURE_DELETE)
-    public BaseResponse<Boolean> deletePicture(DeleteRequest deleteRequest,HttpServletRequest request){
+    public BaseResponse<Boolean> deletePicture(@RequestBody DeleteRequest deleteRequest,HttpServletRequest request){
         //服务类的代码应该写在这里的
         pictureService.deletePicture(deleteRequest, request);
         return ResultUtils.success(true);
@@ -196,15 +196,14 @@ public class PictureController {
             ThrowUtils.throwIF(!hasPermission,ErrorCode.PARAMS_ERROR);
             /// 改用Sa-Token编程式权限
             //            //查询私有空间
-//            User loginUser = userService.getLoginUser(request);
-//            Space space = spaceService.getById(spaceId);
-//            ThrowUtils.throwIF(space == null,ErrorCode.SYSTEM_ERROR,"私有空间不存在");
-//            if (!space.getUserId().equals(loginUser.getId())) {
-//                throw new BusinessException(ErrorCode.NO_AUTH_ERROR,"没有空间权限");
-//            }
-//            //这个其实可以不写，因为只有NullSpaceId为true的时候，才会使查询的时候spaceId为null的条件
-//            pictureQueryRequest.setNullSpaceId(false);
-
+            //User loginUser = userService.getLoginUser(request);
+            //Space space = spaceService.getById(spaceId);
+            //ThrowUtils.throwIF(space == null,ErrorCode.SYSTEM_ERROR,"私有空间不存在");
+            //if (!space.getUserId().equals(loginUser.getId())) {
+            //throw new BusinessException(ErrorCode.NO_AUTH_ERROR,"没有空间权限");
+            //}
+            //  //这个其实可以不写，因为只有NullSpaceId为true的时候，才会使查询的时候spaceId为null的条件
+            //pictureQueryRequest.setNullSpaceId(false);
         }
         //       操作数据库
         Page<Picture> picturePage = pictureService.page(new Page<>(current, pageSize),
@@ -329,9 +328,8 @@ public class PictureController {
      * @return
      */
     @PostMapping("/edit")
-
     @SaSpaceCheckPermission(value = SpaceUserPermissionConstant.PICTURE_EDIT)
-    public BaseResponse<Picture> editPicture(PictureEditRequest pictureEditRequest,HttpServletRequest request){
+    public BaseResponse<Picture> editPicture(@RequestBody PictureEditRequest pictureEditRequest,HttpServletRequest request){
         //判断请求是否为空
         ThrowUtils.throwIF(pictureEditRequest == null, ErrorCode.PARAMS_ERROR, "web传入的参数错误");
         User loginUser = userService.getLoginUser(request);

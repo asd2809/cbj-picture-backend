@@ -64,7 +64,7 @@ public class SpaceController {
      * 根据id删除空间
      */
     @PostMapping("/delete")
-    public BaseResponse<Boolean> deleteSpace(DeleteRequest deleteRequest,HttpServletRequest request){
+    public BaseResponse<Boolean> deleteSpace(@RequestBody DeleteRequest deleteRequest,HttpServletRequest request){
 //        服务类的代码应该写在这里的
         //1.判断传入的请求是否为空
         if (deleteRequest ==null || deleteRequest.getId() <= 0){
@@ -140,7 +140,7 @@ public class SpaceController {
      * @return
      */
     @GetMapping("/get/vo")
-    public BaseResponse<SpaceVO> getSpaceVOById(Long id,HttpServletRequest request){
+    public BaseResponse<SpaceVO> getSpaceVOById(@RequestParam Long id,HttpServletRequest request){
         //1.判断请求是否为空
         ThrowUtils.throwIF(id==null,ErrorCode.PARAMS_ERROR,"传入空间的id为空");
         //2.操作数据库

@@ -120,10 +120,10 @@ public abstract class PictureUploadTemplate {
         //设置压缩后图片的地址
 //        uploadPictureResult.setUrl( cosClientConfig.getHost() + "/" + compressedCiObject.getKey());
         //在cos中删除只需桶名加上文件路径即可，不需要其他的比如cos的host，这是cos删除的规范
-        uploadPictureResult.setUrl(url +"/"+ thumbnailCiObject.getKey());
+        uploadPictureResult.setUrl(url +"/"+compressedCiObject.getKey() );
         //设置缩略图地址
 //        uploadPictureResult.setThumbnailUrl(cosClientConfig.getHost() + "/" + thumbnailCiObject.getKey());
-        uploadPictureResult.setThumbnailUrl(url +"/"+ compressedCiObject.getKey());
+        uploadPictureResult.setThumbnailUrl(url +"/"+ thumbnailCiObject.getKey());
         uploadPictureResult.setPicColor(imageInfo.getAve());
         //返回可访问的地址
         return uploadPictureResult;

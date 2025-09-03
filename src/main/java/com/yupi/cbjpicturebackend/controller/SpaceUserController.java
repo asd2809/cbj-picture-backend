@@ -162,6 +162,7 @@ public class SpaceUserController {
         //只需要对条件构造器添加一个userId即可,其他条件不需要管
         spaceUserQueryRequest.setUserId(longinUser.getId());
         List<SpaceUser> list = spaceUserService.list(spaceUserService.getQueryWrapper(spaceUserQueryRequest));
+
         return ResultUtils.success(list);
     }
 }
