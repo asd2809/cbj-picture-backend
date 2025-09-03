@@ -3,6 +3,7 @@ package com.yupi.cbjpicturebackend.model.dto.picture;
 import lombok.Data;
 
 import java.io.Serializable;
+import java.util.List;
 
 @Data
 public class PictureEditRequest implements Serializable {
@@ -28,7 +29,7 @@ public class PictureEditRequest implements Serializable {
     /**
      * 标签(json)数组
      */
-    private String tags;
+    private List<String> tags;
 
     private static final long serialVersionUID = 1L;
 }

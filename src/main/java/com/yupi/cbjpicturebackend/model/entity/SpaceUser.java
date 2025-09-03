@@ -45,13 +45,4 @@ public class SpaceUser {
      * 更新时间
      */
     private Date updateTime;
-    /**
-     *
-     */
-    private Date editTime;
-    /**
-     * 逻辑删除
-     */
-    @TableLogic
-    private Integer isDelete;
 }

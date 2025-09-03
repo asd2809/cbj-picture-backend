@@ -115,10 +115,9 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         //把旧图片放在外面，方方便删除
         Picture oldPicture;
         if (pictureId != null) {
-//
             oldPicture = this.getById(pictureId);
             ThrowUtils.throwIF(oldPicture == null, ErrorCode.NOT_FOUND_ERROR, "图片不存在");
-//           仅限本人或管理员可以编辑图片
+            //仅限本人或管理员可以编辑图片
             if (oldPicture.getUserId().equals(loginUser.getId())  && !userService.isAdmin(loginUser)) {
                 ThrowUtils.throwIF(true, ErrorCode.NO_AUTH_ERROR);
             }
@@ -181,7 +180,9 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         picture.setPicFormat(uploadPictureResult.getPicFormat());
         picture.setUserId(loginUser.getId()); // ✅ 补充用户ID
         picture.setPicColor(uploadPictureResult.getPicColor());
-//        补充过审参数
+        String format = String.format("这是一个 %s 图片", picName);
+        picture.setIntroduction(format);
+        //补充过审参数
         this.fillReviewParams(picture, loginUser);
         //5.保存到数据库
         //如果PictureId不为空，则为更新
@@ -256,7 +257,8 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 //        从多字段中搜索
         if (StrUtil.isNotEmpty(searchText)) {
 //            需要拼接查询条件
-            queryWrapper.and(qw -> qw.like("name", searchText)
+            queryWrapper.and(
+                    qw -> qw.like("name", searchText)
                     .or()
                     .like("introduction", searchText)
             );
@@ -280,14 +282,14 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         queryWrapper.like(StrUtil.isNotEmpty(picFormat), "picFormat", picFormat);
         queryWrapper.like(StrUtil.isNotEmpty(reviewMessage), "reviewMessage", reviewMessage);
         queryWrapper.eq(ObjUtil.isNotEmpty(picScale), "picScale", picScale);
-        queryWrapper.eq(ObjUtil.isNotEmpty(searchText), "category", category);
+        queryWrapper.eq(ObjUtil.isNotEmpty(category), "category", category);
         queryWrapper.eq(ObjUtil.isNotEmpty(picWidth), "picWidth", picWidth);
         queryWrapper.eq(ObjUtil.isNotEmpty(picHeight), "picHeight", picHeight);
-        queryWrapper.eq(ObjUtil.isNotEmpty(searchText), "picSize", picSize);
+        queryWrapper.eq(ObjUtil.isNotEmpty(picSize), "picSize", picSize);
         queryWrapper.eq(ObjUtil.isNotEmpty(reviewStatus),"reviewStatus",reviewStatus);
         queryWrapper.eq(ObjUtil.isNotEmpty(reviewUserId), "reviewUserId", reviewUserId);
         //大于等于startEditTime
-        queryWrapper.ge(ObjUtil.isNotEmpty(endEditTime), "endEditTIme", startEditTime);
+        queryWrapper.ge(ObjUtil.isNotEmpty(startEditTime), "endEditTIme", startEditTime);
         //小于endEditTime
         queryWrapper.lt(ObjUtil.isNotEmpty(endEditTime), "endEditTIme", endEditTime);
         //以上来查询条件筛选出endEditTIme 在 [startEditTIme, endEditTIme) 区间内的数据
@@ -338,16 +340,16 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 //                .,ap(picture -> Picture.objTovo(picture))
                 .map(PictureVO::objToVo)
                 .collect(Collectors.toList());
-//      //1.关联查询用户信息
-//        将所有图片的userId放进一个set中,避免重复查询
-//        set类型可以自动去重,List不行
+// //1.关联查询用户信息
+//将所有图片的userId放进一个set中,避免重复查询
+//set类型可以自动去重,List不行
         Set<Long> userIdSet = pictureList.stream()
                 .map(Picture::getUserId)
                 .collect(Collectors.toSet());
-//        通过userId查询所有的用户
+        //通过userId查询所有的用户
         Map<Long, List<User>> userIdUserListMap = userService.listByIds(userIdSet).stream()
                 .collect(Collectors.groupingBy(User::getId));
-//      2.填充信息
+        //2.填充信息
         pictureVOList.forEach(pictureVO -> {
             Long userId = pictureVO.getUserId();
             User user = null;
@@ -365,7 +367,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
     @Override
     public void deletePicture(DeleteRequest deleteRequest, HttpServletRequest request) {
         //1.判断传入的请求是否为空
-        if (deleteRequest ==null || deleteRequest.getId() <= 0){
+        if (deleteRequest == null || deleteRequest.getId() <= 0){
             ThrowUtils.throwIF(true,ErrorCode.PARAMS_ERROR);
         }
 //        获取id
@@ -405,8 +407,6 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
             //随便返回一个，因为用不到
             return result;
         });
-
-
         //清理对象存储的图片存储
         this.clearPicture(picture);
         return ;
@@ -503,7 +503,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         //1.校验参数
         String searchText = pictureUploadByBatchRequest.getSearchText();
         Integer count = pictureUploadByBatchRequest.getCount();
-        ThrowUtils.throwIF(count > 30, ErrorCode.PARAMS_ERROR, "最多抓取30条");
+        ThrowUtils.throwIF(count >100,ErrorCode.PARAMS_ERROR, "最多抓取100条");
         String namePrefix = pictureUploadByBatchRequest.getNamePrefix();
         if(StrUtil.isBlank(namePrefix)){
             //如果传递的请求的图片名为空，则默认为searchText(关键词)
@@ -546,6 +546,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
             PictureUploadRequest pictureUploadRequest = new PictureUploadRequest();
             pictureUploadRequest.setFileUrl(fileUrl);
             pictureUploadRequest.setPicName(namePrefix + (uploadCount + 1));
+            pictureUploadRequest.setSpaceId(null);
             try {
                 PictureVO pictureVO = this.uploadPicture(fileUrl, pictureUploadRequest, loginUser);
                 log.info("图片上传成功,id = {}", pictureVO.getId());
@@ -696,10 +697,13 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         //创建扩图任务
         CreateOutPaintingTaskRequest createOutPaintingTaskRequest = new CreateOutPaintingTaskRequest();
         CreateOutPaintingTaskRequest.Input input = new CreateOutPaintingTaskRequest.Input();
+
         /**
-         *在picture存放的地址url不是完整的地址，所以从接口文档进行查询会报错
+         *
          */
-        input.setImageUrl("https://cbj-1352475166.cos.ap-nanjing.myqcloud.com/" +  picture.getUrl());
+        String imgerUrl = picture.getUrl() + "?x-oss-process=image/format,webp";
+        input.setImageUrl( imgerUrl);
+        log.info("url : {}" ,input.getImageUrl());
 //        input.setImageUrl("https://www.gstatic.com/webp/gallery/1.jpg");
         createOutPaintingTaskRequest.setInput(input);
         createOutPaintingTaskRequest.setParameters(createPictureOutPaintingTaskRequest.getParameters());
