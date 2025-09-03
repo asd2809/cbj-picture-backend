@@ -192,8 +192,9 @@ public class PictureController {
             //为了查询的时候使spaceId为null
             pictureQueryRequest.setNullSpaceId(true);
         }else{
-            boolean hasPermission = StpKit.SPACE.hasPermission(SpaceUserPermissionConstant.PICTURE_VIEW);
-            ThrowUtils.throwIF(!hasPermission,ErrorCode.PARAMS_ERROR);
+            /// ture表示有权限，false表示没有权限
+//            boolean hasPermission = StpKit.SPACE.hasPermission(SpaceUserPermissionConstant.PICTURE_VIEW);
+//            ThrowUtils.throwIF(!hasPermission,ErrorCode.SYSTEM_ERROR);
             /// 改用Sa-Token编程式权限
             //            //查询私有空间
             //User loginUser = userService.getLoginUser(request);
