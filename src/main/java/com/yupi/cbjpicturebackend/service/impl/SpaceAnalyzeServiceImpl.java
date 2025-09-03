@@ -110,7 +110,7 @@ public class SpaceAnalyzeServiceImpl extends ServiceImpl<SpaceMapper, Space>
             ///多了分类查询
             //统计图库的分类图片
             QueryWrapper<Picture> queryWrapper = new QueryWrapper<>();
-        fillAnalyzeQueryWrapper(spaceCategoryRequest, queryWrapper);
+            fillAnalyzeQueryWrapper(spaceCategoryRequest, queryWrapper);
             /// COUNT(*) AS count ,统计当前组内的数据数，并起别名count返回
             /// SUM(pic_size) AS total 统计当前组内所有pic_size的综合，并起别名total返回
             queryWrapper.select("category, COUNT(*) AS count, SUM(picSize) AS total");
@@ -296,6 +296,7 @@ public class SpaceAnalyzeServiceImpl extends ServiceImpl<SpaceMapper, Space>
         //3.私有空间
         if (spaceId != null) {
             queryWrapper.eq("spaceId", spaceId);
+            return;
         }
         throw new BusinessException(ErrorCode.PARAMS_ERROR, "进行空间分析的时候，未指定查询范围");
     }
