@@ -96,7 +96,7 @@ public class SpaceController {
      */
     @PostMapping("/update")
     @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
-    public BaseResponse<Boolean> updateSpace(SpaceUpdateRequest spaceUpdateRequest,
+    public BaseResponse<Boolean> updateSpace(@RequestBody SpaceUpdateRequest spaceUpdateRequest,
                                                HttpServletRequest request) {
         //1.判断传入的请求是否为空
         ThrowUtils.throwIF(spaceUpdateRequest==null || spaceUpdateRequest.getId() <= 0,
@@ -149,7 +149,7 @@ public class SpaceController {
         SpaceVO spaceVO = spaceService.getSpaceVO(space);
         User loginUser = userService.getLoginUser(request);
         List<String> permissionList = spaceUserAuthManager.getPermissionList(space, loginUser);
-        spaceVO.setPermissions(permissionList);
+        spaceVO.setPermissionList(permissionList);
         return ResultUtils.success(spaceVO);
     }
 

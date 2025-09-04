@@ -57,7 +57,7 @@ public class SpaceUserController {
                                            HttpServletRequest request) {
         ThrowUtils.throwIF(spaceUserAddRequest == null, ErrorCode.PARAMS_ERROR);
         User user = userService.getLoginUser(request);
-        Long result = spaceUserService.addSpaceUser(spaceUserAddRequest);
+        Long result = spaceUserService.addSpaceUser(spaceUserAddRequest,user);
         return ResultUtils.success(result);
     }
     /**
@@ -150,12 +150,11 @@ public class SpaceUserController {
 
     /**
      * 查询我加入的团队空间列表(可以通过当前登录的用户id进行查询,)
-     *
      * @param request
      * @return
      */
     @PostMapping("/list/my")
-    public BaseResponse<List<SpaceUser>> listMyTeamSpace(HttpServletRequest request) {
+    public BaseResponse<List<SpaceUserVo>> listMyTeamSpace(HttpServletRequest request) {
         //查询是通过当前用户进行查询
         User longinUser = userService.getLoginUser(request);
         SpaceUserQueryRequest spaceUserQueryRequest = new SpaceUserQueryRequest();
@@ -163,6 +162,6 @@ public class SpaceUserController {
         spaceUserQueryRequest.setUserId(longinUser.getId());
         List<SpaceUser> list = spaceUserService.list(spaceUserService.getQueryWrapper(spaceUserQueryRequest));
 
-        return ResultUtils.success(list);
+        return ResultUtils.success(spaceUserService.getSpaceUserVOList(list));
     }
 }

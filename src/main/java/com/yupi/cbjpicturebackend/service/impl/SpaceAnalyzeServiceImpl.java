@@ -79,15 +79,18 @@ public class SpaceAnalyzeServiceImpl extends ServiceImpl<SpaceMapper, Space>
             ThrowUtils.throwIF(space == null, ErrorCode.NOT_FOUND_ERROR);
             //校验权限,仅管理员有权限
             checkSpaceAnalyze(spaceUsageAnalyzeRequest, loginUser);
+            long count = pictureService.lambdaQuery()
+                    .eq(Picture::getSpaceId,space.getId()).count();
             //封装返回对象
             SpaceUsageAnalyzeResponse spaceUsageAnalyzeResponse = new SpaceUsageAnalyzeResponse();
             double sizeUsageRatio = NumberUtil.round(space.getTotalSize() * 100.0 /space.getMaxSize(),2 ).doubleValue();
-            double countUsageRatio = NumberUtil.round(space.getTotalCount() * 100.0 /space.getMaxSize(),2 ).doubleValue();
+            double countUsageRatio = NumberUtil.round(space.getTotalCount() * 100.0 /space.getMaxCount(),2 ).doubleValue();
+
 
             spaceUsageAnalyzeResponse.setUsedSize(space.getTotalSize());
             spaceUsageAnalyzeResponse.setMaxSize(space.getMaxSize());
             spaceUsageAnalyzeResponse.setSizeUsageRatio(sizeUsageRatio);
-            spaceUsageAnalyzeResponse.setUserCount(space.getTotalCount());
+            spaceUsageAnalyzeResponse.setUserCount(count);
             spaceUsageAnalyzeResponse.setMaxCount(space.getMaxCount());
             spaceUsageAnalyzeResponse.setUserUsageRatio(countUsageRatio);
             return spaceUsageAnalyzeResponse;

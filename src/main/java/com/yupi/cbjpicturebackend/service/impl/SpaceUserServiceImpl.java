@@ -51,14 +51,14 @@ public class SpaceUserServiceImpl extends ServiceImpl<SpaceUserMapper, SpaceUser
 
 
     @Override
-    public long addSpaceUser(SpaceUserAddRequest spaceUserAddRequest) {
+    public long addSpaceUser(SpaceUserAddRequest spaceUserAddRequest,User loginUser) {
         SpaceUser spaceUser = new SpaceUser();
         BeanUtils.copyProperties(spaceUserAddRequest, spaceUser);
         //校验参数
         validSpaceUser(spaceUser, true);
         //添加新数据
         boolean save = this.save(spaceUser);
-        ThrowUtils.throwIF(save, ErrorCode.OPERATION_ERROR, "向数据库添加数据失败");
+        ThrowUtils.throwIF(!save, ErrorCode.OPERATION_ERROR, "向数据库添加数据失败");
         return spaceUser.getId();
     }
 
@@ -133,11 +133,8 @@ public class SpaceUserServiceImpl extends ServiceImpl<SpaceUserMapper, SpaceUser
             Space space = spaceService.getById(spaceId);
             ThrowUtils.throwIF(space == null, ErrorCode.PARAMS_ERROR);
         }
-        //校验空间角色
-        String spaceRole = spaceUser.getSpaceRole();
-        ThrowUtils.throwIF(spaceRole == null, ErrorCode.PARAMS_ERROR, "传入的spaceRole为空");
-        SpaceRoleEnum enumByValue = SpaceRoleEnum.getEnumByValue(spaceRole);
-        ThrowUtils.throwIF(enumByValue == null, ErrorCode.PARAMS_ERROR, "空间橘色不存在");
+        //默认空间角色为浏览者
+        spaceUser.setSpaceRole(SpaceRoleEnum.VIEWER.getValue());
     }
 
     @Override
@@ -178,12 +175,10 @@ public class SpaceUserServiceImpl extends ServiceImpl<SpaceUserMapper, SpaceUser
         Long userId = spaceUserQueryRequest.getUserId();
         String spaceRole = spaceUserQueryRequest.getSpaceRole();
 
-
         queryWrapper.eq(ObjUtil.isNotEmpty(id), "id", id);
         queryWrapper.eq(ObjUtil.isNotEmpty(spaceId), "spaceId", spaceId);
         queryWrapper.eq(ObjUtil.isNotEmpty(userId), "userId", userId);
         queryWrapper.eq(ObjUtil.isNotEmpty(spaceRole), "spaceRole", spaceRole);
-
         return queryWrapper;
     }
 

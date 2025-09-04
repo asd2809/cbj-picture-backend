@@ -2,8 +2,10 @@ package com.yupi.cbjpicturebackend.model.dto.spaceuser;
 
 import lombok.Data;
 
+import java.io.Serializable;
+
 @Data
-public class SpaceUserQueryRequest {
+public class SpaceUserQueryRequest implements Serializable {
 
     /**
      *
@@ -14,6 +16,9 @@ public class SpaceUserQueryRequest {
      */
     private Long spaceId;
 
+    /**
+     * 用户Id
+     */
     private Long userId;
 
     /**

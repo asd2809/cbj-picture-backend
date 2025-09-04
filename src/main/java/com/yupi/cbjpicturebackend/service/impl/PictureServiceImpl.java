@@ -643,6 +643,7 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         String spaceId = pictureEditByBatchRequest.getSpaceId();
         String category = pictureEditByBatchRequest.getCategory();
         List<String> tags = pictureEditByBatchRequest.getTags();
+
         ThrowUtils.throwIF(loginUser == null, ErrorCode.NO_AUTH_ERROR);
         ThrowUtils.throwIF(spaceId == null, ErrorCode.PARAMS_ERROR);
         ThrowUtils.throwIF(CollUtil.isEmpty(pictureIdList), ErrorCode.PARAMS_ERROR);
@@ -663,10 +664,10 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         }
         //4。更新分类和标签
         pictureList.forEach(picture -> {
-            if (ObjUtil.isNull(category)) {
+            if (ObjUtil.isNotEmpty(category)) {
                 picture.setCategory(category);
             }
-            if (ObjUtil.isNull(tags)) {
+            if (ObjUtil.isNotEmpty(tags)) {
                 picture.setTags(JSONUtil.toJsonStr(tags));
             }
         });
@@ -728,15 +729,21 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
      * @param nameRule
      */
     public void fillPictureWithNameRule(List<Picture> pictureList, String nameRule) {
-        if (StrUtil.isBlank(nameRule) || StrUtil.isBlank(nameRule)) {
+        if (StrUtil.isBlank(nameRule)) {
             return;
         }
         long count = 1;
         try {
             for (Picture picture : pictureList) {
-                String picName = nameRule.replaceAll("\\{序号}", String.valueOf(count++));
+                // 如果模板里还没有 {序号}，就自动补上“_” + 字面量 {序号}
+                if (!nameRule.contains("{序号}")) {
+                    nameRule = StrUtil.format("{}_{{}}", nameRule, "序号"); // 输出：原串_{序号}
+                }
+                String template = nameRule.replace("{序号}", "{}");
+                String picName  = StrUtil.format(template, count++);
                 picture.setName(picName);
             }
+
         } catch (Exception e) {
             log.error("名称解析异常", e);
             throw new BusinessException(ErrorCode.OPERATION_ERROR, "名称解析异常");
@@ -789,7 +796,14 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
 
     }
 
-
+    public static void main(String[] args) {
+        int count = 0;
+        String nameRule = "图片";
+        nameRule = StrUtil.format("{}_{{}}", nameRule, "序号"); // 输出：原串_{序号}
+        String template = nameRule.replace("{序号}", "{}");
+        String picName = StrUtil.format(template, count++);
+        System.out.println(picName);
+    }
 }
 
 

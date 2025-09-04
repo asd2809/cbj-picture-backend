@@ -193,8 +193,8 @@ public class PictureController {
             pictureQueryRequest.setNullSpaceId(true);
         }else{
             /// ture表示有权限，false表示没有权限
-//            boolean hasPermission = StpKit.SPACE.hasPermission(SpaceUserPermissionConstant.PICTURE_VIEW);
-//            ThrowUtils.throwIF(!hasPermission,ErrorCode.SYSTEM_ERROR);
+            boolean hasPermission = StpKit.SPACE.hasPermission(SpaceUserPermissionConstant.PICTURE_VIEW);
+            ThrowUtils.throwIF(!hasPermission,ErrorCode.NO_AUTH_ERROR,"用户没权限");
             /// 改用Sa-Token编程式权限
             //            //查询私有空间
             //User loginUser = userService.getLoginUser(request);
@@ -273,6 +273,7 @@ public class PictureController {
         return ResultUtils.success(pictureVOPage);
     }
 
+
     /**
      * 管理员通过id获取图片
      * @param id
@@ -318,7 +319,7 @@ public class PictureController {
 
         List<String> permissionList = spaceUserAuthManager.getPermissionList(space, loginUser);
         PictureVO pictureVO = pictureService.getPictureVO(picture,request);
-        pictureVO.setPermissions(permissionList);
+        pictureVO.setPermissionList(permissionList);
         return ResultUtils.success(pictureVO);
     }
 

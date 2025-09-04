@@ -18,7 +18,7 @@ public class SpaceUser {
     /**
      * id
      */
-    @TableId(type = IdType.ASSIGN_ID)
+    @TableId(type = IdType.AUTO)
     private Long id;
 
     /**
@@ -34,7 +34,7 @@ public class SpaceUser {
     /**
      * 空间角色：viewer/editor/admin
      */
-    private String spaceRole = "viewer";
+    private String spaceRole;
 
     /**
      * 创建时间

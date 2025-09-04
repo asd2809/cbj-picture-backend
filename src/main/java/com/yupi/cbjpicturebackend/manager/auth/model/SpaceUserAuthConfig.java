@@ -1,6 +1,6 @@
 package com.yupi.cbjpicturebackend.manager.auth.model;
 
-import com.yupi.cbjpicturebackend.model.dto.spaceuser.SpaceUserAddRequest;
+
 import lombok.Data;
 
 import java.io.Serializable;

@@ -59,7 +59,7 @@ public class SpaceVO implements Serializable {
     /**
      * 空间级别:0-私有 1-团队
      */
-    private Integer spaceRole;
+    private Integer spaceType;
     /**
      * 创建用户
      */
@@ -67,7 +67,7 @@ public class SpaceVO implements Serializable {
     /**
      * 添加权限列表
      */
-    private List<String> permissions = new ArrayList<>();
+    private List<String> permissionList = new ArrayList<>();
 
     private static final long serialVersionUID = 1L;
 
