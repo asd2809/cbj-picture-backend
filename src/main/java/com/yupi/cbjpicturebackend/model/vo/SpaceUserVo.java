@@ -29,8 +29,8 @@ public class SpaceUserVo implements Serializable {
      *
      */
     private SpaceVO spaceVO;
-    private UserVO userVO;
 
+    private UserVO userVO;
 
     private Date createTime;
     private Date updateTime;

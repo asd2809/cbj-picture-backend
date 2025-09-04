@@ -71,6 +71,6 @@ public interface SpaceUserService extends IService<SpaceUser> {
      * @param
      * @return
      */
-    long addSpaceUser(SpaceUserAddRequest spaceUserAddRequest);
+    long addSpaceUser(SpaceUserAddRequest spaceUserAddRequest,User loginUser);
 
 }

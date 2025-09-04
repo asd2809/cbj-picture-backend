@@ -120,7 +120,7 @@ public class StpInterfaceImpl implements StpInterface {
             if (spaceId == null) {
                 if (picture.getUserId().equals(userId) || userService.isAdmin(loginUser)) {
                     return ADMIN_PERMISSIONS;
-                } else {
+                }else {
                     // 不是自己的图片，仅可查看
                     return Collections.singletonList(SpaceUserPermissionConstant.PICTURE_VIEW);
                 }
@@ -151,53 +151,12 @@ public class StpInterfaceImpl implements StpInterface {
             return spaceUserAuthManager.getPermissionsByRole(spaceUser.getSpaceRole());
         }
     }
-
-    /**
-     * 从请求中获取上下文对象
-     */
-    private SpaceUserAuthContext getAuthContextByRequest() {
-        HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes()).getRequest();
-        String contentType = request.getHeader(Header.CONTENT_TYPE.getValue());
-        SpaceUserAuthContext authRequest;
-        // 获取请求参数
-        if (ContentType.JSON.getValue().equals(contentType)) {
-            String body = ServletUtil.getBody(request);
-            authRequest = JSONUtil.toBean(body, SpaceUserAuthContext.class);
-        } else {
-            Map<String, String> paramMap = ServletUtil.getParamMap(request);
-            authRequest = BeanUtil.toBean(paramMap, SpaceUserAuthContext.class);
-        }
-        // 根据请求路径区分 id 字段的含义
-        Long id = authRequest.getId();
-        if (ObjUtil.isNotNull(id)) {
-            // 获取到请求路径的业务前缀，/api/picture/aaa?a=1
-            String requestURI = request.getRequestURI();
-            // 先替换掉上下文，剩下的就是前缀
-            String partURI = requestURI.replace(contextPath + "/", "");
-            // 获取前缀的第一个斜杠前的字符串
-            String moduleName = StrUtil.subBefore(partURI, "/", false);
-            switch (moduleName) {
-                case "picture":
-                    authRequest.setPictureId(id);
-                    break;
-                case "spaceUser":
-                    authRequest.setSpaceUserId(id);
-                    break;
-                case "space":
-                    authRequest.setSpaceId(id);
-                    break;
-                default:
-            }
-        }
-        return authRequest;
-    }
-
     /**
      * 本项目不使用这个
      */
     @Override
     public List<String> getRoleList(Object loginId, String loginType) {
-       return new ArrayList<String>();
+        return new ArrayList<String>();
     }
 
     /**
@@ -216,6 +175,47 @@ public class StpInterfaceImpl implements StpInterface {
                 .map(field -> ReflectUtil.getFieldValue(object, field))
                 // 检查是否所有字段都为空
                 .allMatch(ObjectUtil::isEmpty);
+    }
+
+    /**
+     * 从请求中获取上下文对象
+     */
+    private SpaceUserAuthContext getAuthContextByRequest()  {
+        // 定义方法，返回SpaceUserAuthContext对象
+        HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes()).getRequest(); // 获取当前HTTP请求对象
+        String contentType = request.getHeader(Header.CONTENT_TYPE.getValue()); // 获取请求头Content-Type
+        SpaceUserAuthContext authRequest; // 声明authRequest对象，用于存放解析后的请求参数
+        // 获取请求参数
+        if (ContentType.JSON.getValue().equals(contentType)) { // 如果Content-Type是JSON
+            String body = ServletUtil.getBody(request); // 获取请求体字符串
+            authRequest = JSONUtil.toBean(body, SpaceUserAuthContext.class); // 将JSON字符串转为SpaceUserAuthContext对象
+        } else { // 否则（表单或URL参数）
+            Map<String, String> paramMap = ServletUtil.getParamMap(request); // 获取请求参数Map
+            authRequest = BeanUtil.toBean(paramMap, SpaceUserAuthContext.class); // 将参数Map转为SpaceUserAuthContext对象
+        }
+        // 根据请求路径区分 id 字段的含义
+        Long id = authRequest.getId(); // 获取通用id字段
+        if (ObjUtil.isNotNull(id)) { // 如果id不为空
+            // 获取到请求路径的业务前缀，例如 /api/picture/aaa?a=1
+            String requestURI = request.getRequestURI(); // 获取完整请求URI
+            // 去掉上下文路径，剩下模块路径
+            String partURI = requestURI.replace(contextPath + "/", ""); // 去掉应用上下文路径
+            // 获取前缀的第一个斜杠前的字符串，作为模块名
+            String moduleName = StrUtil.subBefore(partURI, "/", false); // 截取模块名，例如 picture、spaceUser、space
+            switch (moduleName) { // 根据模块名分发id
+                case "picture": // 如果是picture模块
+                    authRequest.setPictureId(id); // 将通用id设置为pictureId
+                    break;
+                case "spaceUser": // 如果是spaceUser模块
+                    authRequest.setSpaceUserId(id); // 将通用id设置为spaceUserId
+                    break;
+                case "space": // 如果是space模块
+                    authRequest.setSpaceId(id); // 将通用id设置为spaceId
+                    break;
+                default: // 其他模块不处理
+            }
+        }
+        return authRequest; // 返回填充好的SpaceUserAuthContext对象
     }
 
 }

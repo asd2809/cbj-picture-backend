@@ -99,7 +99,7 @@ public class PictureVO {
     /**
      * 添加权限列表
      */
-    private List<String> permissions = new ArrayList<>();
+    private List<String> permissionList= new ArrayList<>();
     /**
      *空间id
      */

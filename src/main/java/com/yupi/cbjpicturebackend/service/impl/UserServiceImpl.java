@@ -100,10 +100,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "用户不存在或者密码错误");
         }
         //4.保存用魂的登录装套
-//        每一个用户的session是不一样的
+        //每一个用户的session是不一样的
         request.getSession().setAttribute(UserConstant.USER_LOGIN_STATE, user);
         /// 记录用户登录态到 Sa-token，便于空间鉴权时使用，注意保证该用户信息与 SpringSession 中的信息过期时间一致
         StpKit.SPACE.login(user.getId());
+        /// 保存登录信息
         StpKit.SPACE.getSession().set(UserConstant.USER_LOGIN_STATE, user);
         return this.getLoginUserVO(user);
     }

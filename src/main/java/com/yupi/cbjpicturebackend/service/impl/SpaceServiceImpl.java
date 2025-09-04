@@ -78,7 +78,6 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
             if (ObjectUtil.isEmpty(spaceType)) {
                 throw new BusinessException(ErrorCode.PARAMS_ERROR, "不确定空间类型");
             }
-            return;
         }
         /**
          * -----修改空间的数据校验--------
@@ -181,6 +180,7 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
         Long userId = spaceQueryRequest.getUserId();
         String sortField = spaceQueryRequest.getSortField();
         String sortOrder = spaceQueryRequest.getSortOrder();
+        /// 按照空间类型查询
         Integer spaceType = spaceQueryRequest.getSpaceType();
         QueryWrapper<Space> queryWrapper = new QueryWrapper<>();
 
@@ -247,7 +247,6 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
         }
         //4.控制一个用户只能创建一个私有空间
         //intern()的作用是把字符串放入字符串常量池中国，并返回池中唯一的引用，
-
         String lock = String.valueOf(userId).intern();
         //使用用户的id的字符串对象作为锁
         //保证同一个用户id的操作不会并发执行，不同用户拿到的是不同的锁，因此互不影响，可以并发创建
@@ -259,16 +258,17 @@ public class SpaceServiceImpl extends ServiceImpl<SpaceMapper, Space>
                 //判断是否已有空间
                 boolean exists = this.lambdaQuery()
                         .eq(Space::getUserId, userId)
+                        /// 补一个查询条件，可以用来判断是否为团队空间
                         .eq(Space::getSpaceType, space.getSpaceType())
                         .exists();
                 if (exists) {
-                    throw new BusinessException(ErrorCode.PARAMS_ERROR, "每个用户只能创建一个私有空间");
+                    throw new BusinessException(ErrorCode.PARAMS_ERROR, "一种类型的空间每个用户只能创建一个");
                 }
                 //存入数据库
                 boolean result = this.save(space);
                 //创建私有空间
                 ThrowUtils.throwIF(!result, ErrorCode.PARAMS_ERROR, "保存空间到数据库失败");
-                if (space.getSpaceType() == SpaceTypeEnum.PRIVATE.getValue()) {
+                if (space.getSpaceType() == SpaceTypeEnum.TEAM.getValue()) {
                     //创建成员记录(给创建人设置)
                     SpaceUser spaceUser = new SpaceUser();
                     spaceUser.setSpaceId(space.getId());
