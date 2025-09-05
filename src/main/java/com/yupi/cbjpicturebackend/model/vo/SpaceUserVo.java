@@ -30,6 +30,11 @@ public class SpaceUserVo implements Serializable {
      */
     private SpaceVO spaceVO;
 
+    /**
+     * 原始Space对象，用于兼容前端代码
+     */
+    private Space space;
+
     private UserVO userVO;
 
     private Date createTime;

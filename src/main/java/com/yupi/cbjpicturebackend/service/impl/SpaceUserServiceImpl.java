@@ -105,6 +105,8 @@ public class SpaceUserServiceImpl extends ServiceImpl<SpaceUserMapper, SpaceUser
                     Space space = spaceMap.get(spaceUser.getSpaceId());
                     if (space != null) {
                         spaceUserVo.setSpaceVO(spaceService.getSpaceVO(space));
+                        // 同时设置原始space字段以兼容前端代码
+                        spaceUserVo.setSpace(space);
                     }
 
                     return spaceUserVo;
