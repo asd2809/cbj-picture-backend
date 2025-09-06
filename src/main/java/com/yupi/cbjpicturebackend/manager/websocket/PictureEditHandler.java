@@ -11,10 +11,9 @@ import com.yupi.cbjpicturebackend.manager.websocket.model.PictureEditActionEnum;
 import com.yupi.cbjpicturebackend.manager.websocket.model.PictureEditMessageTypeEnum;
 import com.yupi.cbjpicturebackend.manager.websocket.model.PictureEditRequestMessage;
 import com.yupi.cbjpicturebackend.manager.websocket.model.PictureEditResponseMessage;
-import com.yupi.cbjpicturebackend.model.entity.User;
-import com.yupi.cbjpicturebackend.service.UserService;
+import com.yupi.yupicture.domain.user.entity.User;
+import com.yupi.yupicture.application.service.UserApplicationService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
@@ -24,7 +23,6 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import javax.annotation.Resource;
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -43,7 +41,7 @@ public class PictureEditHandler extends TextWebSocketHandler {
     private final Map<Long, Set<WebSocketSession>> pictureSessions = new ConcurrentHashMap<>();
 
     @Resource
-    private UserService userService;
+    private UserApplicationService userApplicationService;
     @Resource
     @Lazy
     private PictureEditEventProducer pictureEditEventProducer;
@@ -68,7 +66,7 @@ public class PictureEditHandler extends TextWebSocketHandler {
         String message = String.format("用户 %s 加入编辑", user.getUserName());
         ///  用于发送给前端
         responseMessage.setMessage(message);
-        responseMessage.setUser(userService.getUserVO(user));
+        responseMessage.setUser(userApplicationService.getUserVO(user));
 
         /// 广播给所有用户
         broadcastPictureEditing(pictureId, responseMessage);
@@ -138,7 +136,7 @@ public class PictureEditHandler extends TextWebSocketHandler {
         responseMessage.setType(PictureEditMessageTypeEnum.INFO.getValue());
         String message = String.format("用户 %s 离开编辑", user.getUserName());
         responseMessage.setMessage(message);
-        responseMessage.setUser(userService.getUserVO(user));
+        responseMessage.setUser(userApplicationService.getUserVO(user));
         /// 广播给所有用户
         broadcastPictureEditing(pictureId, responseMessage);
     }
@@ -161,7 +159,7 @@ public class PictureEditHandler extends TextWebSocketHandler {
             responseMessage.setType(PictureEditMessageTypeEnum.ENTER_EDIT.getValue());
             String message = String.format("用户 %s 进入编辑", user.getUserName());
             responseMessage.setMessage(message);
-            responseMessage.setUser(userService.getUserVO(user));
+            responseMessage.setUser(userApplicationService.getUserVO(user));
             /// 广播给所有用户
             broadcastPictureEditing(pictureId, responseMessage);
         }
@@ -194,7 +192,7 @@ public class PictureEditHandler extends TextWebSocketHandler {
             String message = String.format("用户 %s 执行 %s", user.getUserName(), pictureEditActionEnum.getText());
             responseMessage.setMessage(message);
             responseMessage.setEditAction(editAction);
-            responseMessage.setUser(userService.getUserVO(user));
+            responseMessage.setUser(userApplicationService.getUserVO(user));
             /// 广播给所有用户(除了当前客户端之外的其他用户，否则会造成重复编辑)
             broadcastPictureEditing(pictureId, responseMessage, session);
         }
@@ -219,7 +217,7 @@ public class PictureEditHandler extends TextWebSocketHandler {
             responseMessage.setType(PictureEditMessageTypeEnum.EXIT_EDIT.getValue());
             String message = String.format("用户 %s 退出编辑", user.getUserName());
             responseMessage.setMessage(message);
-            responseMessage.setUser(userService.getUserVO(user));
+            responseMessage.setUser(userApplicationService.getUserVO(user));
             /// 广播给所有用户
             broadcastPictureEditing(pictureId, responseMessage);
         }

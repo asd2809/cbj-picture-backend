@@ -1,16 +1,12 @@
 package com.yupi.cbjpicturebackend.manager.websocket.disruptor;
 
-import cn.hutool.json.JSONUtil;
 import com.lmax.disruptor.WorkHandler;
 import com.yupi.cbjpicturebackend.manager.websocket.PictureEditHandler;
-import com.yupi.cbjpicturebackend.manager.websocket.model.PictureEditActionEnum;
 import com.yupi.cbjpicturebackend.manager.websocket.model.PictureEditMessageTypeEnum;
 import com.yupi.cbjpicturebackend.manager.websocket.model.PictureEditRequestMessage;
-import com.yupi.cbjpicturebackend.manager.websocket.model.PictureEditResponseMessage;
-import com.yupi.cbjpicturebackend.model.entity.User;
-import com.yupi.cbjpicturebackend.service.UserService;
+import com.yupi.yupicture.domain.user.entity.User;
+import com.yupi.yupicture.application.service.UserApplicationService;
 import lombok.extern.slf4j.Slf4j;
-import org.checkerframework.checker.units.qual.C;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.WebSocketSession;
 
@@ -28,7 +24,7 @@ import static com.yupi.cbjpicturebackend.manager.websocket.model.PictureEditMess
 public class PictureEditEventWorkHandler implements WorkHandler<PictureEditEvent> {
 
     @Resource
-    private UserService userService;
+    private UserApplicationService userApplicationService;
     @Resource
     private PictureEditHandler pictureEditHandler;
     /// 每当生产者发布事件后，消费者处理事件的入口

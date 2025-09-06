@@ -1,7 +1,7 @@
 package com.yupi.cbjpicturebackend.manager.websocket.model;
 
 
-import com.yupi.cbjpicturebackend.model.vo.UserVO;
+import com.yupi.yupicture.interfaces.vo.user.UserVO;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

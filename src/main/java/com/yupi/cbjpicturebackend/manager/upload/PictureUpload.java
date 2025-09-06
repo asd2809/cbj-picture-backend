@@ -1,8 +1,8 @@
 package com.yupi.cbjpicturebackend.manager.upload;
 
 import cn.hutool.core.io.FileUtil;
-import com.yupi.cbjpicturebackend.exception.ErrorCode;
-import com.yupi.cbjpicturebackend.exception.ThrowUtils;
+import com.yupi.yupicture.infrastructure.exception.ErrorCode;
+import com.yupi.yupicture.infrastructure.exception.ThrowUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 

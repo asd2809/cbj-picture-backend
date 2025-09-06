@@ -1,8 +1,8 @@
 package com.yupi.cbjpicturebackend.manager.auth;
 
-import com.yupi.cbjpicturebackend.model.entity.Picture;
-import com.yupi.cbjpicturebackend.model.entity.Space;
-import com.yupi.cbjpicturebackend.model.entity.SpaceUser;
+import com.yupi.yupicture.domain.picture.entity.Picture;
+import com.yupi.yupicture.domain.space.entity.Space;
+import com.yupi.yupicture.domain.space.entity.SpaceUser;
 import lombok.Data;
 
 /**

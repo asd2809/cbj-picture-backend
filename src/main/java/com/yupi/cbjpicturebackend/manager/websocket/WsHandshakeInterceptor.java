@@ -2,17 +2,15 @@ package com.yupi.cbjpicturebackend.manager.websocket;
 
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
-import com.yupi.cbjpicturebackend.constant.UserConstant;
 import com.yupi.cbjpicturebackend.manager.auth.SpaceUserAuthManager;
 import com.yupi.cbjpicturebackend.manager.auth.model.SpaceUserPermissionConstant;
-import com.yupi.cbjpicturebackend.model.entity.Picture;
-import com.yupi.cbjpicturebackend.model.entity.Space;
-import com.yupi.cbjpicturebackend.model.entity.User;
-import com.yupi.cbjpicturebackend.model.enums.SpaceTypeEnum;
-import com.yupi.cbjpicturebackend.service.PictureService;
-import com.yupi.cbjpicturebackend.service.SpaceService;
-import com.yupi.cbjpicturebackend.service.SpaceUserService;
-import com.yupi.cbjpicturebackend.service.UserService;
+import com.yupi.yupicture.application.service.SpaceApplicationService;
+import com.yupi.yupicture.domain.picture.entity.Picture;
+import com.yupi.yupicture.domain.space.entity.Space;
+import com.yupi.yupicture.application.service.UserApplicationService;
+import com.yupi.yupicture.domain.user.entity.User;
+import com.yupi.yupicture.domain.space.valueobject.SpaceTypeEnum;
+import com.yupi.yupicture.application.service.PictureApplicationService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.server.ServerHttpRequest;
 import org.springframework.http.server.ServerHttpResponse;
@@ -34,13 +32,13 @@ import java.util.Map;
 @Component
 public class WsHandshakeInterceptor implements HandshakeInterceptor {
     @Resource
-    private UserService userService;
+    private UserApplicationService userApplicationService;
 
     @Resource
-    private PictureService pictureService;
+    private PictureApplicationService pictureApplicationService;
 
     @Resource
-    private SpaceService spaceService;
+    private SpaceApplicationService spaceApplicationService;
 
     @Resource
     private SpaceUserAuthManager spaceUserAuthManager;
@@ -68,13 +66,13 @@ public class WsHandshakeInterceptor implements HandshakeInterceptor {
                 return false;
             }
             // 获取当前用户
-            User loginUser = userService.getLoginUser(servletRequest);
+            User loginUser = userApplicationService.getLoginUser(servletRequest);
             if (ObjUtil.isEmpty(loginUser)) {
                 log.error("未登录");
                 return false;
             }
             //检验当前用户是否有该图片的权限
-            Picture picture = pictureService.getById(pictureId);
+            Picture picture = pictureApplicationService.getById(pictureId);
             if (ObjUtil.isEmpty(picture)) {
                 log.error("图片为空,拒绝握手");
                 return false;
@@ -82,7 +80,7 @@ public class WsHandshakeInterceptor implements HandshakeInterceptor {
             Long spaceId = picture.getSpaceId();
             Space space = null;
             if (spaceId != null) {
-                space = spaceService.getById(spaceId);
+                space = spaceApplicationService.getById(spaceId);
                 if (ObjUtil.isEmpty(space)) {
                     log.error("图片的空间不存在,拒绝握手");
                     return false;
