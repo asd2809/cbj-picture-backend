@@ -29,5 +29,16 @@ public class PictureEditResponseMessage {
     /**
      * 用户信息
      */
+    private UserVO user;
+
+    /**
+     * 用户信息（兼容前端使用）
+     */
     private UserVO userVO;
+
+    // 设置user字段时同时设置userVO字段
+    public void setUser(UserVO user) {
+        this.user = user;
+        this.userVO = user;
+    }
 }

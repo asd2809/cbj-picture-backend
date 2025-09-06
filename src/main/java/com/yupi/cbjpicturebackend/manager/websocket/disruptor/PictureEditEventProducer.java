@@ -21,6 +21,7 @@ public class PictureEditEventProducer {
 
     @Resource
     private Disruptor<PictureEditEvent> pictureEditEventDisruptor;
+
     /// 申请槽位 → 写入数据 → 发布事件”
     public void publishEvent(PictureEditRequestMessage pictureEditRequestMessage, WebSocketSession session, User user, Long pictureId) {
         RingBuffer<PictureEditEvent> ringBuffer = pictureEditEventDisruptor.getRingBuffer(); ///1.获取ringBuffer（环形缓冲区）必须写

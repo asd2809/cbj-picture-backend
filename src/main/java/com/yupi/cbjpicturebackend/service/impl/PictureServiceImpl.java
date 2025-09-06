@@ -24,6 +24,7 @@ import com.yupi.cbjpicturebackend.model.dto.picture.*;
 import com.yupi.cbjpicturebackend.model.entity.Space;
 import com.yupi.cbjpicturebackend.model.entity.User;
 import com.yupi.cbjpicturebackend.model.enums.PictureReviewStatusEnum;
+import com.yupi.cbjpicturebackend.model.enums.SpaceTypeEnum;
 import com.yupi.cbjpicturebackend.model.vo.PictureVO;
 import com.yupi.cbjpicturebackend.model.vo.UserVO;
 import com.yupi.cbjpicturebackend.service.PictureService;
@@ -75,8 +76,6 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
     private CosManager cosManager;
     @Autowired
     private AliYunAiApi aliYunAiApi;
-
-
     /**
      * @param pictureUploadRequest
      * @param loginUser
@@ -91,8 +90,10 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
         if (spaceId != null) {
             Space space = spaceService.getById(spaceId);
             ThrowUtils.throwIF(space == null, ErrorCode.NOT_FOUND_ERROR, "空间不存在");
+            /// 虽然有了Sa-Token，但对于整体的用户的权限还是需要验证的
+            Integer spaceType = space.getSpaceType();
             //必须是该用户管理员才能上传
-            if (!space.getUserId().equals(loginUser.getId())) {
+            if (!space.getUserId().equals(loginUser.getId()) && SpaceTypeEnum.TEAM.getValue() != spaceType ) {
                 throw new BusinessException( ErrorCode.NO_AUTH_ERROR, "没有向该空间上传图片的权限");
             }
             //1.2校验额度
@@ -102,7 +103,6 @@ public class PictureServiceImpl extends ServiceImpl<PictureMapper, Picture>
             if (space.getTotalSize() >= space.getMaxSize()) {
                 throw new BusinessException( ErrorCode.OPERATION_ERROR, "空间图片大小不足");
             }
-
         }
         //2.判断是新增还是更新
         Long pictureId = null;

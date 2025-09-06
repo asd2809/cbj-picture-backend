@@ -183,7 +183,7 @@ public class PictureController {
         int current = pictureQueryRequest.getCurrent();
         int pageSize = pictureQueryRequest.getPageSize();
         //限制爬虫
-        ThrowUtils.throwIF(pageSize > 20,ErrorCode.PARAMS_ERROR);
+        ThrowUtils.throwIF(pageSize > 100,ErrorCode.PARAMS_ERROR,"最多只能同时查询100条图片");
         //空间权限校验
         Long spaceId = pictureQueryRequest.getSpaceId();
         if (spaceId == null) {

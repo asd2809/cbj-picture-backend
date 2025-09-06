@@ -78,7 +78,7 @@ public class SpaceUserController {
         //执行删除操作
         boolean result = spaceUserService.removeById(id);
         ThrowUtils.throwIF(!result, ErrorCode.OPERATION_ERROR);
-        return ResultUtils.success(result);
+        return ResultUtils.success(true);
     }
 
     /**

@@ -6,7 +6,7 @@ server:
     session:
       cookie:
         #30天过期
-        max-age: 2592000
+        max-age: 3600
 spring:
   #  日志输出颜色
   output:

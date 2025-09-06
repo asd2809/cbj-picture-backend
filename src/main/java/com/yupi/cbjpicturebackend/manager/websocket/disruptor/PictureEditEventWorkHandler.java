@@ -35,6 +35,7 @@ public class PictureEditEventWorkHandler implements WorkHandler<PictureEditEvent
     ///  由 Disruptor 内部线程自动调用
     @Override
     public void onEvent(PictureEditEvent pictureEditEvent) throws Exception {
+        log.info("disruptor开始进行消费");
         PictureEditRequestMessage pictureEditResponseMessage = pictureEditEvent.getPictureEditRequestMessage();
 
         WebSocketSession session = pictureEditEvent.getSession();
@@ -58,5 +59,6 @@ public class PictureEditEventWorkHandler implements WorkHandler<PictureEditEvent
                 log.error("不存在该消息类型 {} ",enumByValue);
                 break;
         }
+        log.info("disruptor消费结束");
     }
 }
