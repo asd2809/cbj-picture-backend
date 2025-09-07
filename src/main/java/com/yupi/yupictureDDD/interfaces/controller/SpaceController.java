@@ -1,0 +1,248 @@
+package com.yupi.yupictureDDD.interfaces.controller;
+
+
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.yupi.yupictureDDD.infrastructure.annotation.AuthCheck;
+import com.yupi.yupictureDDD.infrastructure.common.BaseResponse;
+import com.yupi.yupictureDDD.infrastructure.common.DeleteRequest;
+import com.yupi.yupictureDDD.infrastructure.common.ResultUtils;
+import com.yupi.yupictureDDD.domain.user.constant.UserConstant;
+import com.yupi.yupictureDDD.infrastructure.exception.ErrorCode;
+import com.yupi.yupictureDDD.infrastructure.exception.ThrowUtils;
+import com.yupi.yupictureDDD.shared.auth.SpaceUserAuthManager;
+import com.yupi.yupictureDDD.domain.space.entity.Space;
+import com.yupi.yupictureDDD.domain.user.entity.User;
+import com.yupi.yupictureDDD.domain.space.valueobject.SpaceLevelEnum;
+import com.yupi.yupictureDDD.interfaces.Assembler.SpaceAssembler;
+import com.yupi.yupictureDDD.interfaces.dto.space.*;
+import com.yupi.yupictureDDD.interfaces.vo.space.SpaceVO;
+import com.yupi.yupictureDDD.application.service.SpaceApplicationService;
+import com.yupi.yupictureDDD.application.service.UserApplicationService;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.*;
+
+import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Slf4j
+@RestController
+@RequestMapping("/space")
+public class SpaceController {
+
+    @Resource
+    private SpaceApplicationService spaceApplicationService;
+
+    @Resource
+    private UserApplicationService userApplicationService;
+    @Resource
+    private SpaceUserAuthManager spaceUserAuthManager;
+
+    /**
+     * 创建空间
+     * @param spaceAddRequest
+     * @param request
+     * @return
+     */
+    @PostMapping("/add")
+    public BaseResponse<Long> addSpace(@RequestBody SpaceAddRequest spaceAddRequest, HttpServletRequest request){
+        //1.检验参数
+        ThrowUtils.throwIF(spaceAddRequest==null,ErrorCode.PARAMS_ERROR,"请求参数错误");
+        //2.获取当前用户状态
+        User loginUser = userApplicationService.getLoginUser(request);
+        //3.创建空间
+        long result = spaceApplicationService.addSpace(spaceAddRequest, loginUser);
+        return ResultUtils.success(result);
+    }
+    /**
+     * 根据id删除空间
+     */
+    @PostMapping("/delete")
+    public BaseResponse<Boolean> deleteSpace(@RequestBody DeleteRequest deleteRequest,HttpServletRequest request){
+//        服务类的代码应该写在这里的
+        //1.判断传入的请求是否为空
+        if (deleteRequest ==null || deleteRequest.getId() <= 0){
+            ThrowUtils.throwIF(true,ErrorCode.PARAMS_ERROR);
+        }
+        //获取id
+        //获取当前用户状态
+        User loginUser = userApplicationService.getLoginUser(request);
+        Long id = deleteRequest.getId();
+        //2.判断数据库中的图片是否存在
+        Space space = spaceApplicationService.getById(id);
+        ThrowUtils.throwIF(space == null,ErrorCode.PARAMS_ERROR);
+        //仅本人或管理员可以删除
+        spaceApplicationService.checkSpaceAuth(loginUser, space);
+//        if(!userApplicationService.isAdmin(loginUser) ||!space.getUserId().equals(loginUser.getId()) ){
+//            ThrowUtils.throwIF(true,ErrorCode.PARAMS_ERROR);
+//        }
+        //3.操作数据库
+        boolean result = spaceApplicationService.removeById(id);
+        ThrowUtils.throwIF(!result, ErrorCode.PARAMS_ERROR,"删除图片失败");
+
+        return ResultUtils.success(result);
+    }
+
+    /**
+     * 更新空间
+     * @param spaceUpdateRequest
+     * @return
+     */
+    @PostMapping("/update")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public BaseResponse<Boolean> updateSpace(@RequestBody SpaceUpdateRequest spaceUpdateRequest,
+                                               HttpServletRequest request) {
+        //1.判断传入的请求是否为空
+        ThrowUtils.throwIF(spaceUpdateRequest==null || spaceUpdateRequest.getId() <= 0,
+                ErrorCode.PARAMS_ERROR,"web请求的参数错误");
+
+        //      2.操作数据库
+        //把传入的请求对象转换为space
+        Space space = SpaceAssembler.toSpaceEntity(spaceUpdateRequest);
+        //自动填充数据
+        spaceApplicationService.fillSpaceBySpaceLevel(space);
+        //数据校验
+        spaceApplicationService.validSpace(space,false);
+        //先把请求的id通过数据库查询,是否存在这个空间
+        Space oldSpace = spaceApplicationService.getById(spaceUpdateRequest.getId());
+        ThrowUtils.throwIF(oldSpace == null,ErrorCode.PARAMS_ERROR,"该空间不存在数据库中");
+        boolean result = spaceApplicationService.updateById(space);
+        //这个才是真正的进行更新操作
+        ThrowUtils.throwIF(!result,ErrorCode.SYSTEM_ERROR,"数据库操作失败");
+        return ResultUtils.success(true);
+    }
+    /**
+     * 管理员通过id获取空间
+     * @param id
+     * @return
+     */
+    @PostMapping("/get")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public BaseResponse<Space> getSpaceById(Long id){
+        //1.判断请求是否为空
+        ThrowUtils.throwIF(id==null,ErrorCode.PARAMS_ERROR,"传入空间的id为空");
+        //2.操作数据库
+        Space space = spaceApplicationService.getById(id);
+        ThrowUtils.throwIF(space==null,ErrorCode.SYSTEM_ERROR,"查不到这个空间");
+        return ResultUtils.success(space);
+    }
+
+    /**
+     * 根据id查询空间(封装类)
+     * @param id
+     * @return
+     */
+    @GetMapping("/get/vo")
+    public BaseResponse<SpaceVO> getSpaceVOById(@RequestParam Long id,HttpServletRequest request){
+        //1.判断请求是否为空
+        ThrowUtils.throwIF(id==null,ErrorCode.PARAMS_ERROR,"传入空间的id为空");
+        //2.操作数据库
+        Space space = spaceApplicationService.getById(id);
+        ThrowUtils.throwIF(space==null,ErrorCode.SYSTEM_ERROR,"查不到这个空间");
+        SpaceVO spaceVO = spaceApplicationService.getSpaceVO(space);
+        User loginUser = userApplicationService.getLoginUser(request);
+        List<String> permissionList = spaceUserAuthManager.getPermissionList(space, loginUser);
+        spaceVO.setPermissionList(permissionList);
+        return ResultUtils.success(spaceVO);
+    }
+
+    /**
+     * 分页查询空间(仅限管理员))
+     * @param spaceQueryRequest
+     * @return
+     */
+    @PostMapping("/list/page")
+    @AuthCheck(mustRole = UserConstant.ADMIN_ROLE)
+    public BaseResponse<Page<Space>> listSpaceByPage(@RequestBody SpaceQueryRequest spaceQueryRequest){
+//       先判断请求是否为空
+        ThrowUtils.throwIF(spaceQueryRequest==null,
+                ErrorCode.PARAMS_ERROR,"请求参数错误");
+        int current = spaceQueryRequest.getCurrent();
+        int pageSize = spaceQueryRequest.getPageSize();
+        //       操作数据库
+        //进行分页查询
+        Page<Space> spacePage = spaceApplicationService.page(new Page<>(current, pageSize),
+                spaceApplicationService.getQueryWrapper(spaceQueryRequest));
+        ThrowUtils.throwIF(spacePage==null,ErrorCode.SYSTEM_ERROR,"数据库操作失败");
+        return ResultUtils.success(spacePage);
+    }
+
+    /**
+     * 分页查询(封装类)
+     * @param spaceQueryRequest
+     * @return
+     */
+    @PostMapping("/list/page/vo")
+    public BaseResponse<Page<SpaceVO>> listSpaceVOByPage(@RequestBody SpaceQueryRequest spaceQueryRequest,
+                                                             HttpServletRequest request){
+        //先判断请求是否为空
+        ThrowUtils.throwIF(spaceQueryRequest == null,
+                ErrorCode.PARAMS_ERROR,"请求参数错误");
+        int current = spaceQueryRequest.getCurrent();
+        int pageSize = spaceQueryRequest.getPageSize();
+        //限制爬虫
+        ThrowUtils.throwIF(pageSize > 20,ErrorCode.PARAMS_ERROR);
+        //       操作数据库
+        Page<Space> spacePage = spaceApplicationService.page(new Page<>(current, pageSize),
+                spaceApplicationService.getQueryWrapper(spaceQueryRequest));
+        ThrowUtils.throwIF(spacePage==null,ErrorCode.SYSTEM_ERROR,"数据库操作失败");
+        return ResultUtils.success(spaceApplicationService.getSpaceVOPage(spacePage,request));
+    }
+    /**
+     * 编辑空间(主要是用户使用)
+     * @param spaceEditRequest
+     * @param request
+     * @return
+     */
+    @PostMapping("/edit")
+    public BaseResponse<Space> editSpace(SpaceEditRequest spaceEditRequest, HttpServletRequest request){
+        //判断请求是否为空
+        ThrowUtils.throwIF(spaceEditRequest == null || spaceEditRequest.getId() <= 0,ErrorCode.PARAMS_ERROR,"web传入的参数错误");
+        //数据库操作，先通过传入的id获取数据库中对应的space表
+
+        Space space = SpaceAssembler.toSpaceEntity(spaceEditRequest);
+        //设置编辑时间
+        space.setEditTime(new Date());
+        //自动填充数据
+        spaceApplicationService.fillSpaceBySpaceLevel(space);
+        //数据校验
+        spaceApplicationService.validSpace(space,false);
+        User loginUser = userApplicationService.getLoginUser(request);
+         //判断是否存在
+            long id = spaceEditRequest.getId();
+        Space oldSpace = spaceApplicationService.getById(id);
+//      仅本人或管理员可以编辑
+        spaceApplicationService.checkSpaceAuth(loginUser, oldSpace);
+
+        boolean result = spaceApplicationService.updateById(space);
+        ThrowUtils.throwIF(!result,ErrorCode.SYSTEM_ERROR,"数据库操作失败");
+
+        return ResultUtils.success(space);
+    }
+
+
+    /**
+     * 获取所有空间级别
+     * @return
+     */
+    @GetMapping("/list/level")
+    public BaseResponse<List<SpaceLevel>> listSpaceLevel(){
+        List<SpaceLevel> spaceLevelList = Arrays.stream(SpaceLevelEnum.values())
+                .map(spaceLevelEnum -> new SpaceLevel(
+                        spaceLevelEnum.getValue(),
+                        spaceLevelEnum.getText(),
+                        spaceLevelEnum.getMaxCount(),
+                        spaceLevelEnum.getMaxSize()
+                ))
+                .collect(Collectors.toList());
+        return ResultUtils.success(spaceLevelList);
+    }
+
+
+
+
+
+}
